@@ -6,8 +6,9 @@ from a browser (desktop or mobile) to play together live.
 
 - **Server**: Node.js + TypeScript + Express + Socket.IO — authoritative game engine, one
   in-memory room per table.
-- **Client**: React + TypeScript + Vite — mobile-friendly board UI, tiles rendered with the
-  Unicode Mahjong Tiles block (no image assets needed).
+- **Client**: React + TypeScript + Vite — mobile-friendly board UI. Tiles are rendered as
+  plain CJK text/digits (not the Unicode "Mahjong Tiles" block), since that block isn't
+  reliably supported by Android's system/emoji fonts.
 - **Shared**: a `@mahjong/shared` package with the tile model and the client/server protocol
   types, so both sides stay in sync.
 
@@ -47,7 +48,25 @@ integration tests for discard/chi/pon/kong/hu/draw-game/dealer-rotation).
 
 ## Deploying for real (recommended for a standing game night room)
 
-The server can also serve the built client (single deployable process):
+The server also serves the built client, so the whole game is one deployable process with
+one URL — no separate frontend hosting needed.
+
+### One-click deploy (Render, free tier)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/walonma/GAME)
+
+This repo includes a `render.yaml` blueprint. Clicking the button walks you through: sign in
+to Render with GitHub (free, no credit card needed for this service type) → confirm the
+blueprint → Render builds and starts the app automatically. You'll get a URL like
+`https://taiwan-mahjong.onrender.com` — that's the link everyone opens to play. See
+"How to connect and play" below for the exact steps once it's live.
+
+Render's free web services spin down after ~15 minutes of no traffic and take 30-60s to
+wake back up on the next request — normal for a casual game, just means the first person to
+open the link before game night should expect a short wait (a page refresh after ~30s fixes
+a first-load socket hiccup while it's waking up).
+
+### Manual / self-hosted
 
 ```bash
 npm run build
@@ -56,7 +75,7 @@ node packages/server/dist/index.js
 
 Set `PORT` (default `4000`) and optionally `CLIENT_ORIGIN` (CORS allow-list; omit to allow
 any origin, fine for a small private game). Deploy that one process anywhere that runs
-Node (Railway, Render, Fly.io, a small VPS, ...), then everyone opens the same URL and uses
+Node (Railway, Fly.io, a small VPS, ...), then everyone opens the same URL and uses
 "建立新房間" / "加入房間" to create or join a table.
 
 There is no database — rooms live in server memory and are cleared when everyone

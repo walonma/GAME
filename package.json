@@ -2,6 +2,9 @@
   "name": "taiwan-mahjong-online",
   "private": true,
   "version": "1.0.0",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "workspaces": [
     "packages/shared",
     "packages/server",

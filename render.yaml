@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: taiwan-mahjong
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node packages/server/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.1
