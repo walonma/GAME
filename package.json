@@ -1,0 +1,21 @@
+{
+  "name": "taiwan-mahjong-online",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @mahjong/shared",
+    "dev": "npm run build:shared && concurrently -n server,client -c blue,green \"npm run dev -w @mahjong/server\" \"npm run dev -w @mahjong/client\"",
+    "dev:server": "npm run build:shared && npm run dev -w @mahjong/server",
+    "dev:client": "npm run dev -w @mahjong/client",
+    "build": "npm run build:shared && npm run build -w @mahjong/server && npm run build -w @mahjong/client",
+    "test": "npm run build:shared && npm run test -w @mahjong/server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
