@@ -422,18 +422,24 @@ body {
   height: 32px;
 }
 
-.tile-glyph {
-  font-size: 1.6rem;
+.tile-main {
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.tile-small .tile-main {
+  font-size: 0.85rem;
+}
+
+.tile-suit {
+  font-size: 0.7rem;
   line-height: 1;
-}
-
-.tile-small .tile-glyph {
-  font-size: 1rem;
-}
-
-.tile-label {
-  font-size: 0.55rem;
   margin-top: 1px;
+}
+
+.tile-small .tile-suit {
+  font-size: 0.5rem;
 }
 
 .tile-back {
@@ -535,10 +541,10 @@ body {
 
 @media (max-width: 640px) {
   .tile {
-    width: 32px;
-    height: 44px;
+    width: 34px;
+    height: 46px;
   }
-  .tile-glyph {
-    font-size: 1.3rem;
+  .tile-main {
+    font-size: 1.05rem;
   }
 }

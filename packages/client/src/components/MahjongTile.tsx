@@ -1,4 +1,9 @@
-import { Tile, tileGlyph, tileLabel } from "@mahjong/shared";
+import { Tile, tileLabel } from "@mahjong/shared";
+
+// Tile faces are rendered as plain CJK text (never the Unicode "Mahjong Tiles" block,
+// e.g. U+1F007). That block is unreliably supported by Android's system/emoji fonts and
+// tends to render as blank "tofu" boxes on phones/tablets, even though it looks fine on
+// desktop. Plain Han characters + digits render everywhere.
 
 interface Props {
   tile: Tile;
@@ -21,6 +26,13 @@ export function MahjongTile({ tile, onClick, selected, small, faceDown }: Props)
   if (faceDown) {
     return <div className={`tile tile-back ${small ? "tile-small" : ""}`} />;
   }
+  const label = tileLabel(tile);
+  const isNumbered = tile.suit === "man" || tile.suit === "pin" || tile.suit === "sou";
+  // Numbered tiles ("8筒") get a big digit + small suit character underneath;
+  // honors/flowers ("南", "白", "春") are a single character shown large.
+  const digit = isNumbered ? label[0] : label;
+  const suitChar = isNumbered ? label.slice(1) : null;
+
   return (
     <button
       type="button"
@@ -30,8 +42,8 @@ export function MahjongTile({ tile, onClick, selected, small, faceDown }: Props)
       onClick={onClick}
       disabled={!onClick}
     >
-      <span className="tile-glyph">{tileGlyph(tile)}</span>
-      <span className="tile-label">{tileLabel(tile)}</span>
+      <span className="tile-main">{digit}</span>
+      {suitChar && <span className="tile-suit">{suitChar}</span>}
     </button>
   );
 }
