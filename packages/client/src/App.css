@@ -399,14 +399,16 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 54px;
-  background: #f8f3e6;
+  width: 42px;
+  height: 58px;
+  background: linear-gradient(180deg, #fffdf7 0%, #f5efdd 100%);
   border: 1px solid #c9bd97;
+  border-bottom: 3px solid #b3a575;
   border-radius: 6px;
   color: #1a1a1a;
-  padding: 2px 0;
+  padding: 2px;
   cursor: default;
+  font-family: "Noto Serif TC", "PMingLiU", "Songti TC", "STSong", serif;
 }
 
 .tile-clickable {
@@ -418,28 +420,9 @@ body {
 }
 
 .tile-small {
-  width: 24px;
-  height: 32px;
-}
-
-.tile-main {
-  font-size: 1.3rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.tile-small .tile-main {
-  font-size: 0.85rem;
-}
-
-.tile-suit {
-  font-size: 0.7rem;
-  line-height: 1;
-  margin-top: 1px;
-}
-
-.tile-small .tile-suit {
-  font-size: 0.5rem;
+  width: 26px;
+  height: 36px;
+  border-bottom-width: 2px;
 }
 
 .tile-back {
@@ -451,20 +434,87 @@ body {
   outline: 2px solid var(--accent);
 }
 
-.suit-man {
-  color: #a8371e;
+/* 萬: big red numeral + small black 萬 character, like real ivory tiles */
+.tile-man {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
 }
-.suit-pin {
-  color: #1f5fa8;
+.tile-man-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #b0392f;
 }
-.suit-sou {
-  color: #1f7a3d;
+.tile-man-suit {
+  font-size: 0.85rem;
+  color: #1a1a1a;
+  margin-top: 1px;
 }
-.suit-honor {
-  color: #6a2fa0;
+.tile-small .tile-man-num {
+  font-size: 0.85rem;
 }
-.suit-flower {
+.tile-small .tile-man-suit {
+  font-size: 0.5rem;
+}
+
+/* 筒/索 pip-pattern SVGs (see TileArt.tsx) fill the tile face */
+.tile-pip-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 東南西北 / 中發 calligraphy-style characters */
+.tile-honor {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.tile-small .tile-honor {
+  font-size: 0.9rem;
+}
+.tile-wind {
+  color: #2b2b6e;
+}
+.tile-dragon-red {
+  color: #b0392f;
+}
+.tile-dragon-green {
+  color: #2f7d4f;
+}
+
+/* 白板: traditionally a blank tile with just a frame */
+.tile-blank-frame {
+  width: 68%;
+  height: 68%;
+  border: 2px solid #2b4fa8;
+  border-radius: 2px;
+}
+.tile-small .tile-blank-frame {
+  border-width: 1px;
+}
+
+/* 花牌: simple icon + character label */
+.tile-flower {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.tile-flower-svg {
+  width: 65%;
+  height: 65%;
+}
+.tile-flower-label {
+  font-size: 0.85rem;
+  font-weight: 700;
   color: #c9418d;
+  margin-top: -2px;
+}
+.tile-small .tile-flower-label {
+  font-size: 0.5rem;
 }
 
 /* ---------------- Hand result modal ---------------- */
@@ -541,10 +591,13 @@ body {
 
 @media (max-width: 640px) {
   .tile {
-    width: 34px;
-    height: 46px;
+    width: 36px;
+    height: 50px;
   }
-  .tile-main {
-    font-size: 1.05rem;
+  .tile-man-num {
+    font-size: 1.15rem;
+  }
+  .tile-honor {
+    font-size: 1.2rem;
   }
 }
