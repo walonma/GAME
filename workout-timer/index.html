@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>核心與背部訓練計時器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1020'/%3E%3Ccircle cx='16' cy='17' r='9' fill='none' stroke='%233ddc97' stroke-width='3'/%3E%3Cpath d='M16 12v5.5l3.5 2' stroke='%233ddc97' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M12 5h8' stroke='%233ddc97' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0b1020;
+    --bg-soft:#131a2e;
+    --card:#161f38;
+    --line:#26314f;
+    --text:#e8edfb;
+    --muted:#93a0c2;
+    --accent:#3ddc97;
+    --accent-2:#4aa8ff;
+    --rest:#ffb648;
+    --done:#a78bfa;
+    --danger:#ff6b6b;
+    --ring:#3ddc97;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    background-image:radial-gradient(1000px 600px at 50% -15%, #1b2a4a 0%, rgba(11,16,32,0) 60%);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 8px) env(safe-area-inset-left);
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:16px 16px 48px}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .title{font-size:17px;font-weight:700;letter-spacing:.3px}
+  .title small{display:block;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
+  .iconbtn{
+    background:var(--card);border:1px solid var(--line);color:var(--text);
+    border-radius:12px;padding:9px 12px;font-size:14px;cursor:pointer;font-family:inherit;
+  }
+  .iconbtn:active{transform:translateY(1px)}
+
+  .stage{
+    background:linear-gradient(180deg,var(--card),var(--bg-soft));
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 16px 16px;text-align:center;position:relative;overflow:hidden;
+  }
+  .stage::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--ring);opacity:.9;
+  }
+  .tag{
+    display:inline-block;font-size:11px;letter-spacing:.6px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:3px 10px;margin-bottom:8px;
+  }
+  .exname{font-size:23px;font-weight:800;margin:2px 0 2px}
+  .exname em{font-style:normal;color:var(--muted);font-weight:600;font-size:14px;display:block;margin-top:2px}
+  .setline{font-size:13px;color:var(--muted);margin-bottom:8px}
+  .setline b{color:var(--text)}
+
+  .ringwrap{position:relative;width:230px;height:230px;margin:6px auto 4px}
+  .ringwrap svg{transform:rotate(-90deg);display:block}
+  .ringbg{stroke:#222c48;stroke-width:12;fill:none}
+  .ringfg{stroke:var(--ring);stroke-width:12;fill:none;stroke-linecap:round;transition:stroke .3s}
+  .ringtext{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .time{font-size:56px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-1px;line-height:1}
+  .time.warn{color:var(--danger)}
+  .statelabel{font-size:13px;color:var(--muted);margin-top:6px;min-height:20px}
+
+  .side{
+    font-size:20px;font-weight:800;margin:8px 0 2px;min-height:30px;color:var(--accent-2);
+  }
+  .repline{font-size:14px;color:var(--muted);min-height:22px}
+  .repline b{color:var(--text);font-variant-numeric:tabular-nums}
+  .subphase{
+    display:inline-block;margin-top:8px;font-size:13px;padding:4px 12px;border-radius:999px;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);min-height:26px
+  }
+  .cue{
+    margin-top:12px;font-size:13px;color:var(--muted);text-align:left;
+    background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  }
+  .cue b{color:var(--text)}
+
+  .controls{display:flex;gap:10px;align-items:center;justify-content:center;margin:16px 0 6px}
+  .btn{
+    font-family:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);
+    border-radius:14px;padding:14px 18px;font-size:15px;font-weight:600;cursor:pointer;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{
+    background:var(--accent);border-color:var(--accent);color:#06251a;min-width:150px;font-size:17px;font-weight:800;
+  }
+  .btn.primary.paused{background:var(--accent-2);border-color:var(--accent-2);color:#05203d}
+  .btn.ghost{background:transparent}
+  .rowbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+  .rowbtns .btn{padding:9px 14px;font-size:13px;font-weight:500;color:var(--muted)}
+
+  .totals{display:flex;justify-content:center;gap:18px;color:var(--muted);font-size:12px;margin-top:10px}
+  .totals b{color:var(--text);font-variant-numeric:tabular-nums}
+
+  h2.sec{font-size:14px;color:var(--muted);font-weight:700;margin:26px 0 10px;letter-spacing:.5px}
+  .phase-h{font-size:12px;color:var(--muted);margin:16px 0 8px;padding-left:2px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .exrow{padding:12px 14px;border-bottom:1px solid var(--line)}
+  .exrow:last-child{border-bottom:none}
+  .exrow.active{background:rgba(61,220,151,.07)}
+  .exhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .exhead .n{font-weight:700;font-size:15px}
+  .exhead .meta{font-size:12px;color:var(--muted)}
+  .sets{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .setchip{
+    display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--bg-soft);
+    border-radius:10px;padding:7px 10px;font-size:13px;cursor:pointer;color:var(--muted);
+    font-family:inherit;
+  }
+  .setchip .box{
+    width:16px;height:16px;border-radius:5px;border:1.5px solid #46527a;display:inline-flex;
+    align-items:center;justify-content:center;font-size:11px;color:#06251a;flex:0 0 auto;
+  }
+  .setchip.done{color:var(--text);border-color:var(--accent)}
+  .setchip.done .box{background:var(--accent);border-color:var(--accent)}
+  .setchip.current{outline:2px solid var(--accent-2);outline-offset:1px;color:var(--text)}
+  .setchip .go{color:var(--accent-2);font-size:12px}
+
+  details.settings{margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+  details.settings summary{padding:14px;cursor:pointer;font-weight:700;font-size:14px;list-style:none}
+  details.settings summary::-webkit-details-marker{display:none}
+  details.settings summary::after{content:" ▾";color:var(--muted)}
+  details.settings[open] summary::after{content:" ▴"}
+  .sbody{padding:0 14px 16px;border-top:1px solid var(--line)}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .field:last-child{border-bottom:none}
+  .field label{font-size:13px}
+  .field .hint{display:block;font-size:11px;color:var(--muted)}
+  input[type=number]{
+    width:78px;background:var(--bg-soft);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:8px 10px;font-size:15px;font-family:inherit;text-align:center;
+  }
+  input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+  .grid .g{display:flex;flex-direction:column;gap:4px}
+  .grid .g span{font-size:11px;color:var(--muted);text-align:center}
+  .grid input{width:100%}
+  .settitle{font-weight:700;font-size:14px;margin-top:14px}
+  .note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+  .toast{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#22304f;color:var(--text);
+    border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;
+    transition:opacity .25s;pointer-events:none;z-index:9
+  }
+  .toast.show{opacity:1}
+  @media (max-width:400px){
+    .time{font-size:48px}
+    .ringwrap{width:200px;height:200px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="title">核心與背部訓練計時器
+      <small>五大動作 · 最後 5 秒與換動作有聲音提醒</small>
+    </div>
+    <button class="iconbtn" id="btn-sound" title="音效開關">🔊</button>
+  </header>
+
+  <section class="stage" id="stage">
+    <span class="tag" id="tag">準備開始</span>
+    <div class="exname" id="exname">按「開始」啟動<em id="exen">Ready</em></div>
+    <div class="setline" id="setline">五個動作 · 共 15 組</div>
+
+    <div class="ringwrap">
+      <svg width="230" height="230" viewBox="0 0 230 230">
+        <circle class="ringbg" cx="115" cy="115" r="100"></circle>
+        <circle class="ringfg" id="ring" cx="115" cy="115" r="100"
+                stroke-dasharray="628.3" stroke-dashoffset="0"></circle>
+      </svg>
+      <div class="ringtext">
+        <div class="time" id="time">00:00</div>
+        <div class="statelabel" id="statelabel">尚未開始</div>
+      </div>
+    </div>
+
+    <div class="side" id="side"></div>
+    <div class="repline" id="repline"></div>
+    <div><span class="subphase" id="subphase">準備好就開始吧</span></div>
+
+    <div class="cue" id="cue"></div>
+
+    <div class="controls">
+      <button class="btn ghost" id="btn-prev" title="上一段">⏮</button>
+      <button class="btn primary" id="btn-play">開始</button>
+      <button class="btn ghost" id="btn-next" title="下一段">⏭</button>
+    </div>
+    <div class="rowbtns">
+      <button class="btn" id="btn-reset">重設全部</button>
+      <button class="btn" id="btn-restart-seg">重來這一段</button>
+    </div>
+
+    <div class="totals">
+      <span>已完成 <b id="elapsedTotal">00:00</b></span>
+      <span>剩餘 <b id="remainTotal">00:00</b></span>
+      <span>總長約 <b id="totalest">--</b></span>
+    </div>
+  </section>
+
+  <h2 class="sec">課表進度</h2>
+  <div id="checklist"></div>
+
+  <details class="settings">
+    <summary>設定（時間、次數、聲音）</summary>
+    <div class="sbody">
+      <div class="settitle">一般</div>
+      <div class="field">
+        <label>開始前準備時間<span class="hint">第一個動作前的倒數</span></label>
+        <input type="number" id="s-prepare" min="0" max="120" step="5">
+      </div>
+      <div class="field">
+        <label>動作與動作之間休息<span class="hint">換到下一個動作時</span></label>
+        <input type="number" id="s-exrest" min="0" max="300" step="10">
+      </div>
+
+      <div class="settitle">聲音</div>
+      <div class="field">
+        <label>嗶聲提醒<span class="hint">最後 5 秒每秒一嗶，結束時長嗶</span></label>
+        <input type="checkbox" id="s-sound">
+      </div>
+      <div class="field">
+        <label>語音播報<span class="hint">動作名稱、第幾組、休息與換邊</span></label>
+        <input type="checkbox" id="s-voice">
+      </div>
+      <div class="field">
+        <label>每下節拍聲<span class="hint">每一下的細微「噠」聲</span></label>
+        <input type="checkbox" id="s-ticks">
+      </div>
+      <div class="field">
+        <label>震動提醒<span class="hint">手機支援時，切換段落時震動</span></label>
+        <input type="checkbox" id="s-vibrate">
+      </div>
+      <div class="field">
+        <label>訓練時螢幕不熄滅<span class="hint">支援的瀏覽器才有效</span></label>
+        <input type="checkbox" id="s-wakelock">
+      </div>
+      <div class="field">
+        <label>測試聲音<span class="hint">先按一下解鎖手機音訊</span></label>
+        <button class="iconbtn" id="btn-test">播放測試</button>
+      </div>
+
+      <div class="settitle">各動作參數</div>
+      <div id="exsettings"></div>
+
+      <div class="field" style="margin-top:12px">
+        <label>回復預設值<span class="hint">恢復原始課表設定</span></label>
+        <button class="iconbtn" id="btn-defaults">還原預設</button>
+      </div>
+      <p class="note">
+        「每下秒數」是完成一下的節奏（含停留與回放）；「每組次數」對雙邊動作是<b>每一邊</b>的次數。
+        更改設定會重新計算課表，若正在訓練會回到目前這一組的開頭。
+      </p>
+    </div>
+  </details>
+
+  <p class="note" style="text-align:center;margin-top:22px">
+    空白鍵＝開始／暫停　←　→＝上一段／下一段
+  </p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------- 課表資料 */
+
+var EXERCISES = [
+  {
+    key:"bird-dog",
+    name:"鳥狗式",
+    en:"Bird-Dog",
+    phase:"第一階段：深層核心與脊椎穩定（無脊椎壓力）",
+    perSide:true,
+    sides:["右手 ＋ 左腳","左手 ＋ 右腳"],
+    sideVoice:["右手左腳","左手右腳"],
+    cue:"四足跪姿，背打直。右手與左腳同時水平伸直伸長，維持 5 秒，再換邊。過程中腰部絕不凹陷或扭轉。",
+    subphases:[{sec:5,label:"伸直維持"},{sec:3,label:"收回換邊"}],
+    def:{sets:3, reps:6, tempo:8, setRest:60}
+  },
+  {
+    key:"dead-bug",
+    name:"死蟲式",
+    en:"Dead Bug",
+    phase:"第一階段：深層核心與脊椎穩定（無脊椎壓力）",
+    perSide:true,
+    sides:["右手 ＋ 左腳","左手 ＋ 右腳"],
+    sideVoice:["右手左腳","左手右腳"],
+    cue:"平躺，雙手向上舉直，雙腳彎曲 90 度抬高。下背全程平貼地面。對角線的手腳緩慢下降接近地面但不貼地，再收回換邊。",
+    subphases:[{sec:2,label:"對角線緩慢下降"},{sec:2,label:"收回換邊"}],
+    def:{sets:3, reps:8, tempo:4, setRest:60}
+  },
+  {
+    key:"glute-bridge",
+    name:"橋式",
+    en:"Glute Bridge",
+    phase:"第二階段：背部肌力與後側鏈強化（護膝保護脊椎）",
+    perSide:false,
+    cue:"平躺屈膝，腳跟踩地（距離屁股約一腳掌）。用臀部與大腿後側發力把髖部頂起至身體呈一直線，頂端停留 2 秒，不要用腰力硬挺。",
+    subphases:[{sec:1,label:"臀部發力頂起"},{sec:2,label:"頂端停留"},{sec:2,label:"緩慢下放"}],
+    def:{sets:3, reps:10, tempo:5, setRest:60}
+  },
+  {
+    key:"band-row",
+    name:"彈力帶划船",
+    en:"Band Seated Row",
+    phase:"第二階段：背部肌力與後側鏈強化（護膝保護脊椎）",
+    perSide:false,
+    cue:"坐姿，雙腳微彎伸直，彈力帶繞過腳底。挺胸收腹，把彈力帶拉向肋骨兩側，感覺兩片肩胛骨向中間夾緊，停留 1 秒後緩慢放回。",
+    subphases:[{sec:1.5,label:"拉向肋骨兩側"},{sec:1,label:"肩胛夾緊停留"},{sec:1.5,label:"緩慢放回"}],
+    def:{sets:3, reps:12, tempo:4, setRest:60}
+  },
+  {
+    key:"scap-pull",
+    name:"直臂懸垂肩胛拉引",
+    en:"Scapular Pull-ups",
+    phase:"第二階段：背部肌力與後側鏈強化（護膝保護脊椎）",
+    perSide:false,
+    cue:"雙手握單槓懸空（手臂不彎曲），單純靠肩胛骨向下沉、向後夾，把身體提高 2–3 公分，停留 1 秒再放鬆。",
+    subphases:[{sec:1,label:"肩胛下沉後夾"},{sec:1,label:"頂端停留"},{sec:2,label:"緩慢放鬆"}],
+    def:{sets:3, reps:8, tempo:4, setRest:60}
+  }
+];
+
+var GENERAL_DEF = {
+  prepare:15, exRest:90,
+  sound:true, voice:true, ticks:true, vibrate:true, wakelock:true
+};
+
+var SETTINGS_KEY = "workout-timer.settings.v1";
+var PROGRESS_KEY = "workout-timer.progress.v1";
+
+/* ------------------------------------------------------------------ 設定 */
+
+function defaultSettings(){
+  var s = {};
+  for(var k in GENERAL_DEF) s[k] = GENERAL_DEF[k];
+  s.ex = {};
+  EXERCISES.forEach(function(ex){
+    s.ex[ex.key] = {sets:ex.def.sets, reps:ex.def.reps, tempo:ex.def.tempo, setRest:ex.def.setRest};
+  });
+  return s;
+}
+
+function loadSettings(){
+  var s = defaultSettings();
+  try{
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    if(raw){
+      var p = JSON.parse(raw);
+      for(var k in GENERAL_DEF) if(typeof p[k] === typeof GENERAL_DEF[k]) s[k] = p[k];
+      if(p.ex) EXERCISES.forEach(function(ex){
+        var src = p.ex[ex.key]; if(!src) return;
+        ["sets","reps","tempo","setRest"].forEach(function(f){
+          if(typeof src[f] === "number" && isFinite(src[f]) && src[f] >= 0) s.ex[ex.key][f] = src[f];
+        });
+      });
+    }
+  }catch(e){}
+  return s;
+}
+
+function saveSettings(){
+  try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
+}
+
+var settings = loadSettings();
+
+/* ------------------------------------------------------- 進度（當天保存） */
+
+function todayKey(){
+  var d = new Date();
+  return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+}
+function loadProgress(){
+  try{
+    var raw = localStorage.getItem(PROGRESS_KEY);
+    if(raw){
+      var p = JSON.parse(raw);
+      if(p && p.date === todayKey() && p.done) return p.done;
+    }
+  }catch(e){}
+  return {};
+}
+function saveProgress(){
+  try{ localStorage.setItem(PROGRESS_KEY, JSON.stringify({date:todayKey(), done:done})); }catch(e){}
+}
+var done = loadProgress();   // { "bird-dog:0": true, ... }
+
+/* -------------------------------------------------------------- 建立時間軸 */
+
+var timeline = [];
+
+function exByKey(key){
+  for(var i=0;i<EXERCISES.length;i++) if(EXERCISES[i].key === key) return EXERCISES[i];
+  return null;
+}
+function totalRepsOf(ex){
+  var c = settings.ex[ex.key];
+  return ex.perSide ? c.reps*2 : c.reps;
+}
+
+function buildTimeline(){
+  var segs = [];
+  if(settings.prepare > 0){
+    segs.push({type:"prepare", dur:settings.prepare, nextKey:EXERCISES[0].key, nextSet:0});
+  }
+  EXERCISES.forEach(function(ex, i){
+    var c = settings.ex[ex.key];
+    var reps = totalRepsOf(ex);
+    for(var s=0; s<c.sets; s++){
+      segs.push({type:"work", key:ex.key, set:s, reps:reps, tempo:c.tempo, dur:reps*c.tempo});
+      var lastSet = (s === c.sets-1);
+      if(!lastSet){
+        if(c.setRest > 0) segs.push({type:"rest", dur:c.setRest, nextKey:ex.key, nextSet:s+1, kind:"set"});
+      }else if(i < EXERCISES.length-1){
+        if(settings.exRest > 0) segs.push({type:"rest", dur:settings.exRest, nextKey:EXERCISES[i+1].key, nextSet:0, kind:"exercise"});
+      }
+    }
+  });
+  segs.push({type:"done", dur:0});
+  // 起始時間，供總進度計算
+  var acc = 0;
+  segs.forEach(function(s){ s.startAt = acc; acc += s.dur; });
+  return segs;
+}
+
+function totalDuration(){
+  var t = 0; timeline.forEach(function(s){ t += s.dur; }); return t;
+}
+
+/* ------------------------------------------------------------------ 音效 */
+
+var actx = null, scheduled = [], timers = [];
+
+function ensureAudio(){
+  if(!actx){
+    var C = window.AudioContext || window.webkitAudioContext;
+    if(!C) return null;
+    try{ actx = new C(); }catch(e){ return null; }
+  }
+  if(actx.state === "suspended"){ actx.resume().catch(function(){}); }
+  return actx;
+}
+
+function beepAt(when, freq, dur, vol){
+  var ctx = ensureAudio(); if(!ctx || !settings.sound) return;
+  var t = Math.max(when, ctx.currentTime + 0.005);
+  var osc = ctx.createOscillator(), g = ctx.createGain();
+  osc.type = "sine"; osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t); osc.stop(t + dur + 0.05);
+  scheduled.push(osc);
+}
+
+function clearScheduled(){
+  scheduled.forEach(function(o){ try{ o.stop(actx ? actx.currentTime : 0); }catch(e){} });
+  scheduled = [];
+  timers.forEach(function(t){ clearTimeout(t); });
+  timers = [];
+}
+
+/** 為目前段落排定所有聲音（用音訊時鐘，背景分頁也準確） */
+function scheduleSegmentAudio(){
+  clearScheduled();
+  var seg = timeline[idx];
+  if(!seg || seg.type === "done") return;
+  var ctx = ensureAudio();
+  var remain = remaining();
+  if(remain <= 0) return;
+
+  if(ctx && settings.sound){
+    var now = ctx.currentTime;
+    var end = now + remain;
+    // 每一下的節拍聲
+    if(seg.type === "work" && settings.ticks){
+      var elapsedSeg = seg.dur - remain;
+      for(var r=1; r<seg.reps; r++){
+        var tt = now + (r*seg.tempo - elapsedSeg);
+        if(tt > now + 0.05 && tt < end - 0.05) beepAt(tt, 560, 0.05, 0.10);
+      }
+    }
+    // 最後 5 秒倒數嗶
+    for(var k=5; k>=1; k--){
+      var t = end - k;
+      if(t > now + 0.05) beepAt(t, 880, 0.12, 0.30);
+    }
+    // 段落結束：換動作／換段落長嗶（兩短一長，明顯可辨）
+    beepAt(end, 1245, 0.16, 0.42);
+    beepAt(end + 0.20, 1245, 0.16, 0.42);
+    beepAt(end + 0.42, 1660, 0.60, 0.45);
+  }
+
+  // 震動（切換段落）
+  if(settings.vibrate && navigator.vibrate){
+    timers.push(setTimeout(function(){ try{ navigator.vibrate([120,60,120]); }catch(e){} }, remain*1000));
+  }
+
+  // 換邊語音
+  if(seg.type === "work" && settings.voice){
+    var ex = exByKey(seg.key);
+    if(ex && ex.perSide){
+      var passed = seg.dur - remain;
+      for(var i=1; i<seg.reps; i++){
+        var at = i*seg.tempo - passed;
+        if(at > 0.1){
+          (function(sideIdx, delay){
+            timers.push(setTimeout(function(){
+              speak(ex.sideVoice[sideIdx % 2]);
+            }, delay*1000));
+          })(i, at);
+        }
+      }
+    }
+  }
+}
+
+function speak(text){
+  if(!settings.voice || !("speechSynthesis" in window)) return;
+  try{
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-TW"; u.rate = 1.05; u.pitch = 1;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function stopSpeech(){
+  if("speechSynthesis" in window){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+}
+
+/* -------------------------------------------------------------- 計時核心 */
+
+var idx = 0, running = false, segElapsed = 0, anchor = 0, ticker = null, finished = false;
+
+function rawRemaining(){
+  var seg = timeline[idx]; if(!seg) return 0;
+  var e = segElapsed + (running ? (Date.now() - anchor)/1000 : 0);
+  return seg.dur - e;
+}
+function remaining(){
+  return Math.max(0, rawRemaining());
+}
+function segElapsedNow(){
+  var seg = timeline[idx]; if(!seg) return 0;
+  return Math.min(seg.dur, segElapsed + (running ? (Date.now() - anchor)/1000 : 0));
+}
+
+function start(){
+  if(finished) resetAll();
+  ensureAudio();
+  if(settings.voice && "speechSynthesis" in window){
+    // iOS：需要在使用者手勢中先講一次才會解鎖
+    try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); }catch(e){}
+  }
+  running = true;
+  anchor = Date.now();
+  announceSegment();
+  scheduleSegmentAudio();
+  requestWakeLock();
+  if(!ticker) ticker = setInterval(tick, 100);
+  render();
+}
+
+function pause(){
+  if(!running) return;
+  segElapsed = segElapsedNow();
+  running = false;
+  clearScheduled();
+  stopSpeech();
+  releaseWakeLock();
+  render();
+}
+
+function toggle(){ running ? pause() : start(); }
+
+function goTo(i, keepRunning){
+  idx = Math.max(0, Math.min(timeline.length-1, i));
+  segElapsed = 0;
+  anchor = Date.now();
+  finished = (timeline[idx].type === "done");
+  clearScheduled(); stopSpeech();
+  if(running && !finished){ announceSegment(); scheduleSegmentAudio(); }
+  else if(finished){ running = false; releaseWakeLock(); }
+  render();
+}
+
+/** 手動跳下一段（不會自動打勾） */
+function skipNext(){
+  if(idx >= timeline.length-1) return;
+  goTo(idx+1);
+  if(timeline[idx].type === "done") finish();
+}
+
+function prevSeg(){
+  // 已過 3 秒時，先回到本段開頭
+  if(segElapsedNow() > 3 && timeline[idx].type !== "done"){ goTo(idx); return; }
+  goTo(idx-1);
+}
+
+function finish(){
+  finished = true; running = false;
+  clearScheduled(); releaseWakeLock();
+  var ctx = ensureAudio();
+  if(ctx && settings.sound){
+    var n = ctx.currentTime + 0.05;
+    beepAt(n, 660, 0.18, 0.4); beepAt(n+0.22, 880, 0.18, 0.4); beepAt(n+0.44, 1320, 0.8, 0.45);
+  }
+  speak("訓練完成，五個動作都做完了，做得好");
+  if(settings.vibrate && navigator.vibrate){ try{ navigator.vibrate([200,100,200,100,300]); }catch(e){} }
+  render();
+}
+
+/**
+ * 每 100ms 跑一次。時間一律用 Date.now() 換算，所以分頁被系統凍結
+ * （手機切到背景、螢幕關掉）再回來時，會把中間漏掉的段落一次補完，
+ * 不會愈跑愈慢。
+ */
+function tick(){
+  if(!running || finished) return;
+  var carry = -rawRemaining();
+  if(carry < 0){ render(); return; }
+
+  var guard = 0;
+  while(guard++ < 2000){
+    var seg = timeline[idx];
+    if(seg && seg.type === "work"){          // 自然結束的組才自動打勾
+      done[seg.key + ":" + seg.set] = true;
+      saveProgress();
+    }
+    if(idx >= timeline.length-1) break;
+    idx++;
+    clearScheduled();
+    var next = timeline[idx];
+    if(next.type === "done"){ finish(); return; }
+    if(carry < next.dur){
+      segElapsed = carry;
+      anchor = Date.now();
+      announceSegment();
+      scheduleSegmentAudio();
+      break;
+    }
+    carry -= next.dur;                        // 這一段也已經過去了，繼續往下補
+  }
+  render();
+}
+
+function resetAll(){
+  running = false; finished = false; idx = 0; segElapsed = 0;
+  clearScheduled(); stopSpeech(); releaseWakeLock();
+  render();
+}
+
+function announceSegment(){
+  var seg = timeline[idx];
+  if(!seg || !settings.voice) return;
+  if(seg.type === "prepare"){
+    speak("準備開始，第一個動作 " + EXERCISES[0].name);
+  }else if(seg.type === "work"){
+    var ex = exByKey(seg.key);
+    speak(ex.name + "，第 " + (seg.set+1) + " 組，開始" + (ex.perSide ? "，" + ex.sideVoice[0] : ""));
+  }else if(seg.type === "rest"){
+    var nx = exByKey(seg.nextKey);
+    if(seg.kind === "exercise") speak("休息 " + Math.round(seg.dur) + " 秒，下一個動作 " + nx.name);
+    else speak("休息 " + Math.round(seg.dur) + " 秒，下一組 第 " + (seg.nextSet+1) + " 組");
+  }
+}
+
+/* ------------------------------------------------------------ 螢幕不熄滅 */
+
+var wakeLock = null;
+function requestWakeLock(){
+  if(!settings.wakelock || !("wakeLock" in navigator)) return;
+  navigator.wakeLock.request("screen").then(function(l){
+    wakeLock = l;
+    l.addEventListener("release", function(){ wakeLock = null; });
+  }).catch(function(){});
+}
+function releaseWakeLock(){
+  if(wakeLock){ try{ wakeLock.release(); }catch(e){} wakeLock = null; }
+}
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible"){
+    if(running){ requestWakeLock(); render(); }
+  }
+});
+
+/* ------------------------------------------------------------------ 畫面 */
+
+var $ = function(id){ return document.getElementById(id); };
+var ringLen = 2 * Math.PI * 100;
+$("ring").setAttribute("stroke-dasharray", ringLen.toFixed(1));
+
+function fmtLong(s){
+  s = Math.max(0, Math.round(s));
+  var m = Math.floor(s/60), ss = s%60;
+  return (m<10?"0":"") + m + ":" + (ss<10?"0":"") + ss;
+}
+function fmtMin(s){
+  var m = Math.round(s/60);
+  return m + " 分鐘";
+}
+
+function subphaseOf(ex, tInRep, tempo){
+  var base = 0;
+  ex.subphases.forEach(function(p){ base += p.sec; });
+  var scale = base > 0 ? tempo/base : 1;
+  var acc = 0;
+  for(var i=0;i<ex.subphases.length;i++){
+    acc += ex.subphases[i].sec * scale;
+    if(tInRep < acc) return ex.subphases[i].label;
+  }
+  return ex.subphases[ex.subphases.length-1].label;
+}
+
+function render(){
+  var seg = timeline[idx];
+  var rem = remaining();
+  var root = document.documentElement;
+
+  if(finished || !seg || seg.type === "done"){
+    root.style.setProperty("--ring", "var(--done)");
+    $("tag").textContent = "完成";
+    $("exname").innerHTML = "訓練完成 🎉<em>Great work</em>";
+    $("setline").innerHTML = "五個動作共 <b>" + totalSets() + "</b> 組已結束";
+    $("time").textContent = "00:00";
+    $("time").classList.remove("warn");
+    $("statelabel").textContent = "記得伸展與補水";
+    $("side").textContent = "";
+    $("repline").textContent = "";
+    $("subphase").textContent = "按「重設全部」開始新的一輪";
+    $("cue").innerHTML = "<b>收操建議：</b>躺姿抱膝、貓牛式各 30 秒，讓下背放鬆。";
+    $("ring").setAttribute("stroke-dashoffset", "0");
+    $("btn-play").textContent = "再做一輪";
+    $("btn-play").classList.remove("paused");
+  }else if(seg.type === "work"){
+    var ex = exByKey(seg.key);
+    var c = settings.ex[ex.key];
+    var el = segElapsedNow();
+    var repIdx = Math.min(seg.reps-1, Math.floor(el / seg.tempo));
+    var tInRep = el - repIdx*seg.tempo;
+    root.style.setProperty("--ring", "var(--accent)");
+    $("tag").textContent = ex.phase;
+    $("exname").innerHTML = escapeHtml(ex.name) + "<em>" + escapeHtml(ex.en) + "</em>";
+    $("setline").innerHTML = "第 <b>" + (seg.set+1) + "</b> / " + c.sets + " 組　·　" +
+      (ex.perSide ? ("每邊 <b>" + c.reps + "</b> 次") : ("共 <b>" + c.reps + "</b> 次"));
+    $("statelabel").textContent = "訓練中";
+    if(ex.perSide){
+      $("side").textContent = ex.sides[repIdx % 2];
+      $("repline").innerHTML = "第 <b>" + (repIdx+1) + "</b> / " + seg.reps + " 下　（這一邊第 <b>" +
+        (Math.floor(repIdx/2)+1) + "</b> / " + c.reps + " 次）";
+    }else{
+      $("side").textContent = "";
+      $("repline").innerHTML = "第 <b>" + (repIdx+1) + "</b> / " + seg.reps + " 下";
+    }
+    $("subphase").textContent = subphaseOf(ex, tInRep, seg.tempo);
+    $("cue").innerHTML = "<b>動作要領：</b>" + escapeHtml(ex.cue);
+    setTime(rem, seg.dur);
+    $("btn-play").textContent = running ? "暫停" : "繼續";
+    $("btn-play").classList.toggle("paused", !running);
+  }else{
+    // prepare / rest
+    var nx = exByKey(seg.nextKey);
+    var isPrep = seg.type === "prepare";
+    root.style.setProperty("--ring", isPrep ? "var(--accent-2)" : "var(--rest)");
+    $("tag").textContent = isPrep ? "準備" : (seg.kind === "exercise" ? "動作間休息" : "組間休息");
+    $("exname").innerHTML = (isPrep ? "準備開始" : "休息") +
+      "<em>下一個：" + escapeHtml(nx.name) + "　第 " + (seg.nextSet+1) + " 組</em>";
+    var nc = settings.ex[nx.key];
+    $("setline").innerHTML = nx.perSide
+      ? ("待會做 每邊 <b>" + nc.reps + "</b> 次　·　共 " + (nc.reps*2) + " 下")
+      : ("待會做 <b>" + nc.reps + "</b> 次");
+    $("statelabel").textContent = isPrep ? "就定位" : "放鬆呼吸";
+    $("side").textContent = "";
+    $("repline").textContent = "";
+    $("subphase").textContent = isPrep ? "調整呼吸，擺好起始姿勢" : "深呼吸，準備下一組";
+    $("cue").innerHTML = "<b>下一動作要領：</b>" + escapeHtml(nx.cue);
+    setTime(rem, seg.dur);
+    $("btn-play").textContent = running ? "暫停" : (idx===0 && segElapsed===0 ? "開始" : "繼續");
+    $("btn-play").classList.toggle("paused", !running);
+  }
+
+  // 總進度
+  var totalEl = (seg ? seg.startAt : 0) + (seg && seg.type !== "done" ? segElapsedNow() : 0);
+  var total = totalDuration();
+  $("elapsedTotal").textContent = fmtLong(totalEl);
+  $("remainTotal").textContent = fmtLong(total - totalEl);
+  $("totalest").textContent = fmtMin(total);
+  $("btn-sound").textContent = settings.sound ? "🔊" : "🔇";
+
+  renderChecklist();
+}
+
+function setTime(rem, dur){
+  $("time").textContent = fmtLong(rem);
+  $("time").classList.toggle("warn", rem <= 5.001 && rem > 0);
+  var prog = dur > 0 ? (dur - rem)/dur : 0;
+  $("ring").setAttribute("stroke-dashoffset", (ringLen * prog).toFixed(1));
+}
+
+function totalSets(){
+  var n = 0; EXERCISES.forEach(function(e){ n += settings.ex[e.key].sets; }); return n;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+
+/* --------------------------------------------------------------- 課表清單 */
+
+function renderChecklist(){
+  var seg = timeline[idx];
+  var curKey = seg && seg.type === "work" ? seg.key : null;
+  var curSet = seg && seg.type === "work" ? seg.set : -1;
+  var html = "", lastPhase = "";
+
+  EXERCISES.forEach(function(ex, i){
+    if(ex.phase !== lastPhase){
+      html += '<div class="phase-h">' + escapeHtml(ex.phase) + "</div>";
+      html += (lastPhase ? "" : "");
+      lastPhase = ex.phase;
+      html += '<div class="card">';
+    }
+    var c = settings.ex[ex.key];
+    html += '<div class="exrow' + (curKey === ex.key ? " active" : "") + '">';
+    html += '<div class="exhead"><div class="n">' + (i+1) + ". " + escapeHtml(ex.name) +
+            ' <span class="meta">' + escapeHtml(ex.en) + "</span></div>";
+    html += '<div class="meta">' + (ex.perSide ? "每邊 " + c.reps + " 次" : c.reps + " 次") +
+            " · " + c.tempo + " 秒/下</div></div>";
+    html += '<div class="sets">';
+    for(var s=0; s<c.sets; s++){
+      var k = ex.key + ":" + s;
+      var isDone = !!done[k];
+      var isCur = (curKey === ex.key && curSet === s);
+      html += '<span class="setchip' + (isDone?" done":"") + (isCur?" current":"") + '">' +
+              '<span class="box" data-toggle="' + k + '">' + (isDone ? "✓" : "") + "</span>" +
+              "第 " + (s+1) + " 組" +
+              '<span class="go" data-jump="' + ex.key + "|" + s + '">▶</span></span>';
+    }
+    html += "</div></div>";
+    var next = EXERCISES[i+1];
+    if(!next || next.phase !== ex.phase) html += "</div>";
+  });
+
+  var cl = $("checklist");
+  if(cl.dataset.sig !== html){ cl.innerHTML = html; cl.dataset.sig = html; }
+}
+
+document.getElementById("checklist").addEventListener("click", function(e){
+  var t = e.target;
+  if(t.dataset && t.dataset.toggle){
+    var k = t.dataset.toggle;
+    if(done[k]) delete done[k]; else done[k] = true;
+    saveProgress(); renderChecklist();
+  }else if(t.dataset && t.dataset.jump){
+    var parts = t.dataset.jump.split("|");
+    var target = findWorkSeg(parts[0], parseInt(parts[1],10));
+    if(target >= 0){ goTo(target); toast("跳到 " + exByKey(parts[0]).name + " 第 " + (parseInt(parts[1],10)+1) + " 組"); }
+  }
+});
+
+function findWorkSeg(key, set){
+  for(var i=0;i<timeline.length;i++){
+    var s = timeline[i];
+    if(s.type === "work" && s.key === key && s.set === set) return i;
+  }
+  return -1;
+}
+
+/* ---------------------------------------------------------------- 設定 UI */
+
+function renderSettingsUI(){
+  $("s-prepare").value = settings.prepare;
+  $("s-exrest").value  = settings.exRest;
+  $("s-sound").checked = settings.sound;
+  $("s-voice").checked = settings.voice;
+  $("s-ticks").checked = settings.ticks;
+  $("s-vibrate").checked = settings.vibrate;
+  $("s-wakelock").checked = settings.wakelock;
+
+  var html = "";
+  EXERCISES.forEach(function(ex){
+    var c = settings.ex[ex.key];
+    html += '<div class="settitle">' + escapeHtml(ex.name) + "</div>";
+    html += '<div class="grid">' +
+      '<div class="g"><span>組數</span><input type="number" min="1" max="10" step="1" data-ex="'+ex.key+'" data-f="sets" value="'+c.sets+'"></div>' +
+      '<div class="g"><span>' + (ex.perSide ? "每邊次數" : "每組次數") + '</span><input type="number" min="1" max="50" step="1" data-ex="'+ex.key+'" data-f="reps" value="'+c.reps+'"></div>' +
+      '<div class="g"><span>每下秒數</span><input type="number" min="1" max="30" step="1" data-ex="'+ex.key+'" data-f="tempo" value="'+c.tempo+'"></div>' +
+      '<div class="g"><span>組間休息</span><input type="number" min="0" max="300" step="5" data-ex="'+ex.key+'" data-f="setRest" value="'+c.setRest+'"></div>' +
+      "</div>";
+  });
+  $("exsettings").innerHTML = html;
+}
+
+function rebuild(keepPlace){
+  var cur = timeline[idx], key = cur && cur.type === "work" ? cur.key : null,
+      set = cur && cur.type === "work" ? cur.set : -1;
+  timeline = buildTimeline();
+  if(keepPlace && key !== null){
+    var i = findWorkSeg(key, set);
+    idx = i >= 0 ? i : Math.min(idx, timeline.length-1);
+  }else{
+    idx = Math.min(idx, timeline.length-1);
+  }
+  segElapsed = 0; anchor = Date.now();
+  clearScheduled();
+  if(running) scheduleSegmentAudio();
+  render();
+}
+
+document.querySelector(".sbody").addEventListener("change", function(e){
+  var t = e.target;
+  if(t.id === "s-prepare"){ settings.prepare = clampNum(t, 0, 120, GENERAL_DEF.prepare); }
+  else if(t.id === "s-exrest"){ settings.exRest = clampNum(t, 0, 300, GENERAL_DEF.exRest); }
+  else if(t.id === "s-sound"){ settings.sound = t.checked; if(!t.checked) clearScheduled(); else if(running) scheduleSegmentAudio(); }
+  else if(t.id === "s-voice"){ settings.voice = t.checked; if(!t.checked) stopSpeech(); }
+  else if(t.id === "s-ticks"){ settings.ticks = t.checked; if(running) scheduleSegmentAudio(); }
+  else if(t.id === "s-vibrate"){ settings.vibrate = t.checked; if(running) scheduleSegmentAudio(); }
+  else if(t.id === "s-wakelock"){ settings.wakelock = t.checked; t.checked ? requestWakeLock() : releaseWakeLock(); }
+  else if(t.dataset && t.dataset.ex){
+    var f = t.dataset.f;
+    var lim = f === "sets" ? [1,10] : f === "reps" ? [1,50] : f === "tempo" ? [1,30] : [0,300];
+    settings.ex[t.dataset.ex][f] = clampNum(t, lim[0], lim[1], exByKey(t.dataset.ex).def[f]);
+    saveSettings(); rebuild(true); return;
+  }
+  saveSettings(); render();
+});
+
+function clampNum(input, min, max, fallback){
+  var v = parseFloat(input.value);
+  if(!isFinite(v)) v = fallback;
+  v = Math.min(max, Math.max(min, Math.round(v)));
+  input.value = v;
+  return v;
+}
+
+/* ------------------------------------------------------------------ 事件 */
+
+$("btn-play").addEventListener("click", function(){
+  if(finished){ resetAll(); rebuild(false); start(); return; }
+  toggle();
+});
+$("btn-next").addEventListener("click", function(){ skipNext(); });
+$("btn-prev").addEventListener("click", prevSeg);
+$("btn-restart-seg").addEventListener("click", function(){ goTo(idx); });
+$("btn-reset").addEventListener("click", function(){
+  if(!confirm("重設計時器並清除今天的完成勾選？")) return;
+  done = {}; saveProgress();
+  resetAll(); rebuild(false);
+  toast("已重設");
+});
+$("btn-sound").addEventListener("click", function(){
+  settings.sound = !settings.sound; saveSettings();
+  $("s-sound").checked = settings.sound;
+  if(!settings.sound) clearScheduled(); else if(running) scheduleSegmentAudio();
+  toast(settings.sound ? "音效已開啟" : "音效已靜音");
+  render();
+});
+$("btn-test").addEventListener("click", function(){
+  var ctx = ensureAudio();
+  if(ctx){
+    var n = ctx.currentTime + 0.05;
+    beepAt(n, 880, 0.12, 0.3); beepAt(n+0.6, 880, 0.12, 0.3);
+    beepAt(n+1.2, 1245, 0.16, 0.42); beepAt(n+1.4, 1245, 0.16, 0.42); beepAt(n+1.62, 1660, 0.6, 0.45);
+  }
+  speak("聲音測試，換動作");
+  if(settings.vibrate && navigator.vibrate){ try{ navigator.vibrate(120); }catch(e){} }
+});
+$("btn-defaults").addEventListener("click", function(){
+  settings = defaultSettings(); saveSettings();
+  renderSettingsUI(); rebuild(false); toast("已還原預設課表");
+});
+
+document.addEventListener("keydown", function(e){
+  if(/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||""))) return;
+  if(e.code === "Space"){ e.preventDefault(); $("btn-play").click(); }
+  else if(e.code === "ArrowRight"){ e.preventDefault(); skipNext(); }
+  else if(e.code === "ArrowLeft"){ e.preventDefault(); prevSeg(); }
+});
+
+var toastTimer = null;
+function toast(msg){
+  var el = $("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 1600);
+}
+
+/* -------------------------------------------------------------------- 啟動 */
+
+renderSettingsUI();
+timeline = buildTimeline();
+ticker = setInterval(tick, 100);
+render();
+
+})();
+</script>
+</body>
+</html>
