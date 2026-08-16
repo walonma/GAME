@@ -196,6 +196,16 @@ body {
   border-radius: 6px;
 }
 
+.bot-badge {
+  margin-left: 6px;
+  font-size: 0.7rem;
+  background: var(--felt-light);
+  border: 1px solid var(--panel-border);
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
 .seat-status {
   color: var(--text-dim);
   font-size: 0.85rem;

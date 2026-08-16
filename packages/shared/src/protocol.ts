@@ -28,6 +28,7 @@ export interface PublicPlayerView {
   flowers: Tile[];
   isDealer: boolean;
   score: number;
+  isBot: boolean;
 }
 
 export type LegalAction =
@@ -88,7 +89,8 @@ export type ClientAction =
   | { type: "pon"; tileIds: string[] }
   | { type: "chi"; tileIds: string[] }
   | { type: "pass" }
-  | { type: "next-hand" };
+  | { type: "next-hand" }
+  | { type: "fill-bots" };
 
 export interface CreateRoomRequest {
   name: string;

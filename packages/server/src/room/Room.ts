@@ -1,4 +1,4 @@
-import { GameStateView, PublicPlayerView, sortTiles } from "@mahjong/shared";
+import { GameStateView, PublicPlayerView, sortTiles, WIND_NAMES } from "@mahjong/shared";
 import { MahjongGame } from "../game/MahjongGame";
 
 export interface RoomPlayer {
@@ -8,7 +8,10 @@ export interface RoomPlayer {
   socketId: string | null;
   connected: boolean;
   ready: boolean;
+  isBot: boolean;
 }
+
+let botCounter = 0;
 
 export class Room {
   code: string;
@@ -16,6 +19,10 @@ export class Room {
   hostToken: string;
   game?: MahjongGame;
   claimTimer?: ReturnType<typeof setTimeout>;
+  /** Seats with a bot move currently scheduled (setTimeout pending), to avoid double-scheduling. */
+  botTimerSeats: Set<number> = new Set();
+  /** Set once the room is garbage-collected, so any already-scheduled bot timers stop rescheduling themselves. */
+  deleted = false;
 
   constructor(code: string, hostToken: string) {
     this.code = code;
@@ -33,9 +40,29 @@ export class Room {
   addPlayer(name: string, token: string): RoomPlayer {
     const seat = this.players.findIndex((p) => p === null);
     if (seat < 0) throw new Error("房間已滿");
-    const player: RoomPlayer = { seat, token, name, socketId: null, connected: true, ready: false };
+    const player: RoomPlayer = { seat, token, name, socketId: null, connected: true, ready: false, isBot: false };
     this.players[seat] = player;
     return player;
+  }
+
+  /** Fills every empty seat with a computer-controlled bot. Returns the number of bots added. */
+  fillWithBots(): number {
+    let added = 0;
+    for (let seat = 0; seat < 4; seat++) {
+      if (this.players[seat] !== null) continue;
+      const token = `bot-${botCounter++}-${Date.now()}`;
+      this.players[seat] = {
+        seat,
+        token,
+        name: `電腦${WIND_NAMES[seat + 1]}`,
+        socketId: null,
+        connected: true,
+        ready: true,
+        isBot: true,
+      };
+      added++;
+    }
+    return added;
   }
 
   buildView(requestingToken: string | null): GameStateView {
@@ -56,6 +83,7 @@ export class Room {
           flowers: [],
           isDealer: false,
           score: 0,
+          isBot: p.isBot,
         }));
       return {
         roomCode: this.code,
@@ -88,6 +116,7 @@ export class Room {
         flowers: gp.flowers,
         isDealer: gp.seat === game.dealerSeat,
         score: gp.score,
+        isBot: rp?.isBot ?? false,
       };
     });
 

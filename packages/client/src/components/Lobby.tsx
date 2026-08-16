@@ -23,6 +23,10 @@ export function Lobby({ view, onLeave }: Props) {
     socket.emit("action", { type: "start" });
   }
 
+  function fillBots() {
+    socket.emit("action", { type: "fill-bots" });
+  }
+
   function leave() {
     clearSession();
     onLeave();
@@ -50,9 +54,10 @@ export function Lobby({ view, onLeave }: Props) {
                   <div className="seat-name">
                     {p.name}
                     {seat === view.hostSeat && <span className="host-badge">房主</span>}
+                    {p.isBot && <span className="bot-badge">電腦</span>}
                   </div>
                   <div className={`seat-status ${p.ready ? "status-ready" : ""}`}>
-                    {p.connected ? (p.ready ? "已準備" : "尚未準備") : "已離線"}
+                    {p.isBot ? "已準備" : p.connected ? (p.ready ? "已準備" : "尚未準備") : "已離線"}
                   </div>
                 </>
               ) : (
@@ -67,6 +72,11 @@ export function Lobby({ view, onLeave }: Props) {
         <button className="btn" onClick={toggleReady} disabled={!me}>
           {me?.ready ? "取消準備" : "我準備好了"}
         </button>
+        {!allFull && (
+          <button className="btn" onClick={fillBots}>
+            找電腦補位
+          </button>
+        )}
         {isHost && (
           <button className="btn btn-primary" onClick={start} disabled={!allReady}>
             開始遊戲
@@ -76,7 +86,7 @@ export function Lobby({ view, onLeave }: Props) {
           離開房間
         </button>
       </div>
-      {!allFull && <p className="hint-text">需要滿四位玩家才能開始</p>}
+      {!allFull && <p className="hint-text">需要滿四位玩家才能開始，人數不夠可以找電腦補位（例如兩人對戰兩台電腦）</p>}
     </div>
   );
 }

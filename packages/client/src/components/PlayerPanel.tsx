@@ -28,6 +28,7 @@ export function PlayerPanel({ player, isMe, isCurrentTurn, position, discards }:
           {player.name}
           {isMe ? "（你）" : ""}
         </span>
+        {player.isBot && <span className="bot-badge">電腦</span>}
         {player.isDealer && <span className="dealer-badge">莊</span>}
         <span className="player-score">{player.score}</span>
       </div>

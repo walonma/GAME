@@ -96,6 +96,21 @@ briefly loses connection is automatically reconnected to their seat via a token 
 5. When a hand ends (win or 流局 draw), a summary shows the tai breakdown and point
    transfer; any player can click **下一局** to deal the next hand.
 
+### Playing with fewer than 4 people (computer-controlled seats)
+
+You don't need 4 humans. In the lobby, anyone can click **找電腦補位** to fill every empty
+seat with a computer player (e.g. 2 friends + 2 computer seats, or solo against 3). Bot
+seats show a **電腦** badge, are always "ready," and play on their own once the game starts:
+they take a short pause (under ~2s) then draw/discard, and independently decide whether to
+call 吃/碰/槓/胡 during the response window like a real player would. A human still has to
+click **下一局** between hands.
+
+The bot is a simple heuristic player, not a full solver — it always takes a win or an
+available kong, calls pon/chi opportunistically rather than always, and otherwise discards
+whatever in its hand looks least useful to keep (isolated honor tiles first, then isolated
+number tiles, keeping pairs/triplets and tiles with run potential). It's meant to keep a
+short-handed game moving and be a reasonable opponent, not to play optimally.
+
 ## Rules implemented (and scope notes)
 
 This is a full **16-tile Taiwan Mahjong** engine, not a simplified variant:

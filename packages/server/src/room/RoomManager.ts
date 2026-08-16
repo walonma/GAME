@@ -45,9 +45,12 @@ export class RoomManager {
   removeEmptyRoomIfNeeded(code: string) {
     const room = this.rooms.get(code);
     if (!room) return;
-    const anyConnected = room.players.some((p) => p?.connected);
-    if (!anyConnected) {
+    // Bots are always marked "connected" and never leave on their own, so only real
+    // players count here - otherwise a room a human abandoned to bots would never be GC'd.
+    const anyHumanConnected = room.players.some((p) => p && !p.isBot && p.connected);
+    if (!anyHumanConnected) {
       if (room.claimTimer) clearTimeout(room.claimTimer);
+      room.deleted = true;
       this.rooms.delete(code);
     }
   }

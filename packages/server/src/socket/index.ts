@@ -3,6 +3,7 @@ import { ClientAction } from "@mahjong/shared";
 import { RoomManager } from "../room/RoomManager";
 import { MahjongGame } from "../game/MahjongGame";
 import { Room } from "../room/Room";
+import { chooseBotAction } from "../game/Bot";
 
 interface SocketData {
   roomCode?: string;
@@ -12,6 +13,9 @@ interface SocketData {
 interface Ack {
   (res: { ok: true } | { ok: false; message: string }): void;
 }
+
+const BOT_MIN_DELAY_MS = 800;
+const BOT_MAX_DELAY_MS = 1700;
 
 export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
   const socketIndex = new Map<string, SocketData>();
@@ -23,12 +27,51 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
     }
   }
 
+  /** After any state change: push the update to connected humans, then let any bots react. */
+  function afterStateChange(room: Room) {
+    broadcastRoom(room);
+    scheduleBotTurnsIfNeeded(room);
+  }
+
+  /**
+   * Schedules a delayed automatic move for every bot seat that currently has a pending
+   * decision (their turn to discard, or a chi/pon/kong/hu response during a claim window).
+   * Safe to call repeatedly - seats with a move already scheduled, or with nothing to do,
+   * are skipped.
+   */
+  function scheduleBotTurnsIfNeeded(room: Room) {
+    if (room.deleted) return;
+    const game = room.game;
+    if (!game || game.phase !== "playing") return;
+
+    for (let seat = 0; seat < 4; seat++) {
+      const rp = room.players[seat];
+      if (!rp || !rp.isBot) continue;
+      if (room.botTimerSeats.has(seat)) continue;
+      if (game.getLegalActionsFor(seat).length === 0) continue;
+
+      room.botTimerSeats.add(seat);
+      const delay = BOT_MIN_DELAY_MS + Math.random() * (BOT_MAX_DELAY_MS - BOT_MIN_DELAY_MS);
+      setTimeout(() => {
+        room.botTimerSeats.delete(seat);
+        if (room.deleted || room.game !== game || game.getLegalActionsFor(seat).length === 0) return;
+        try {
+          game.handleAction(seat, chooseBotAction(game, seat));
+        } catch {
+          // The decision may have gone stale (e.g. a human already resolved this claim
+          // window) between scheduling and firing - just skip this bot's move.
+        }
+        afterStateChange(room);
+      }, delay);
+    }
+  }
+
   function armClaimTimer(room: Room, ms: number) {
     if (room.claimTimer) clearTimeout(room.claimTimer);
     room.claimTimer = setTimeout(() => {
-      if (!room.game) return;
+      if (room.deleted || !room.game) return;
       room.game.forceResolveClaims();
-      broadcastRoom(room);
+      afterStateChange(room);
     }, ms + 300); // small grace period beyond the client-visible deadline
   }
 
@@ -82,6 +125,10 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
         if (action.type === "ready") {
           if (room.game) throw new Error("遊戲已開始");
           player.ready = action.ready;
+        } else if (action.type === "fill-bots") {
+          if (room.game) throw new Error("遊戲已開始");
+          const added = room.fillWithBots();
+          if (added === 0) throw new Error("已經沒有空位了");
         } else if (action.type === "start") {
           if (room.game) throw new Error("遊戲已開始");
           if (room.filledSeats !== 4) throw new Error("需要滿四人才能開始");
@@ -99,7 +146,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
           room.game.handleAction(player.seat, action);
         }
         respond({ ok: true });
-        broadcastRoom(room);
+        afterStateChange(room);
       } catch (err: any) {
         respond({ ok: false, message: err.message ?? "動作失敗" });
       }
