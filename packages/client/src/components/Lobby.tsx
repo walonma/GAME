@@ -1,6 +1,7 @@
 import { GameStateView } from "@mahjong/shared";
 import { socket } from "../socket";
 import { clearSession } from "../storage";
+import { ALLOW_BOTS } from "../config";
 
 interface Props {
   view: GameStateView;
@@ -72,7 +73,7 @@ export function Lobby({ view, onLeave }: Props) {
         <button className="btn" onClick={toggleReady} disabled={!me}>
           {me?.ready ? "取消準備" : "我準備好了"}
         </button>
-        {!allFull && (
+        {!allFull && ALLOW_BOTS && (
           <button className="btn" onClick={fillBots}>
             找電腦補位
           </button>
@@ -86,7 +87,11 @@ export function Lobby({ view, onLeave }: Props) {
           離開房間
         </button>
       </div>
-      {!allFull && <p className="hint-text">需要滿四位玩家才能開始，人數不夠可以找電腦補位（例如兩人對戰兩台電腦）</p>}
+      {!allFull && (
+        <p className="hint-text">
+          {ALLOW_BOTS ? "需要滿四位玩家才能開始，人數不夠可以找電腦補位（例如兩人對戰兩台電腦）" : "需要滿四位真人玩家才能開始"}
+        </p>
+      )}
     </div>
   );
 }

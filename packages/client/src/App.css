@@ -57,6 +57,17 @@ body {
   margin: 0 0 12px;
 }
 
+.mode-badge {
+  display: inline-block;
+  background: var(--felt-light);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
 .field {
   display: flex;
   flex-direction: column;

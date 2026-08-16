@@ -126,6 +126,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
           if (room.game) throw new Error("遊戲已開始");
           player.ready = action.ready;
         } else if (action.type === "fill-bots") {
+          if (process.env.ALLOW_BOTS === "false") throw new Error("此伺服器僅供真人四人連線，未開放電腦補位");
           if (room.game) throw new Error("遊戲已開始");
           const added = room.fillWithBots();
           if (added === 0) throw new Error("已經沒有空位了");

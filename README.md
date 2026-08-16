@@ -55,16 +55,32 @@ one URL — no separate frontend hosting needed.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/walonma/GAME)
 
-This repo includes a `render.yaml` blueprint. Clicking the button walks you through: sign in
-to Render with GitHub (free, no credit card needed for this service type) → confirm the
-blueprint → Render builds and starts the app automatically. You'll get a URL like
-`https://taiwan-mahjong.onrender.com` — that's the link everyone opens to play. See
-"How to connect and play" below for the exact steps once it's live.
+This repo's `render.yaml` blueprint defines **two separate services from the same
+codebase** — clicking the button deploys both at once, each getting its own URL:
+
+- **`taiwan-mahjong-4p`** — strict 4-human-players version. No "fill with bots" option is
+  even shown.
+- **`taiwan-mahjong-2p`** — 2-4 players version. Empty seats can be filled with
+  computer-controlled bots (see "Playing with fewer than 4 people" below).
+
+Both are built from the exact same source; which mode a deployment is in is controlled by
+an `ALLOW_BOTS` environment variable set per-service in `render.yaml` (baked into that
+service's build, and also enforced server-side so it can't be bypassed from the browser) —
+not by a different branch. So updates you push land in both automatically.
+
+Sign in to Render with GitHub (free, no credit card needed for this service type), confirm
+the blueprint, and Render builds + starts both apps. The exact URLs Render assigns may have
+a random suffix if the plain name is taken (e.g. `taiwan-mahjong-4p-xxxx.onrender.com`) —
+whatever it shows you after deploying is the link to share. Each app's home screen shows a
+small badge ("四人連線版" / "2～4 人版") so it's obvious which one a link is.
 
 Render's free web services spin down after ~15 minutes of no traffic and take 30-60s to
 wake back up on the next request — normal for a casual game, just means the first person to
-open the link before game night should expect a short wait (a page refresh after ~30s fixes
-a first-load socket hiccup while it's waking up).
+open a link before game night should expect a short wait (a page refresh after ~30s fixes a
+first-load socket hiccup while it's waking up).
+
+If you only want one of the two (not both), just delete the other service afterward from
+the Render dashboard — they're independent once created.
 
 ### Manual / self-hosted
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CreateRoomResponse, JoinRoomResponse } from "@mahjong/shared";
 import { emitAck } from "../socket";
 import { loadName, saveName, saveSession } from "../storage";
+import { GAME_MODE_LABEL } from "../config";
 
 interface Props {
   onJoined: () => void;
@@ -50,7 +51,8 @@ export function Home({ onJoined }: Props) {
   return (
     <div className="screen home-screen">
       <h1>台灣麻將連線</h1>
-      <p className="subtitle">邀請三位朋友，四人即時連線打十六張台灣麻將</p>
+      <span className="mode-badge">{GAME_MODE_LABEL}</span>
+      <p className="subtitle">邀請朋友，即時連線打十六張台灣麻將</p>
 
       <label className="field">
         <span>你的名字</span>
