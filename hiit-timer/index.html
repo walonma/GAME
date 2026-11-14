@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0d0b0f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>十分鐘 HIIT 計時器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d0b0f'/%3E%3Cpath d='M17.5 4 8 18h6l-1.5 10L24 13h-6.5z' fill='%23ff5a36'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d0b0f;
+    --surface:#171319;
+    --surface-2:#1f1a22;
+    --line:#302a35;
+    --text:#f6f1f3;
+    --muted:#a3959e;
+    --work:#ff5a36;
+    --rest:#2fd3c4;
+    --warm:#ffb020;
+    --cool:#9b8bff;
+    --accent:var(--work);
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    background-image:radial-gradient(900px 500px at 50% -20%, #241a22 0%, rgba(13,11,15,0) 65%);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 8px) env(safe-area-inset-left);
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:14px 14px 44px}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .title{font-size:17px;font-weight:800;letter-spacing:.2px}
+  .title small{display:block;font-weight:500;font-size:11.5px;color:var(--muted);letter-spacing:0;margin-top:1px}
+  .iconbtn{background:var(--surface);border:1px solid var(--line);color:var(--text);
+    border-radius:11px;padding:9px 12px;font-size:14px;cursor:pointer;font-family:inherit}
+  .iconbtn:active{transform:translateY(1px)}
+
+  /* 全場 10 個區塊的進度條 */
+  .strip{display:flex;gap:3px;margin-bottom:10px}
+  .strip i{flex:1;height:5px;border-radius:3px;background:#2a242e;display:block;position:relative;overflow:hidden}
+  .strip i.done{background:#50454f}
+  .strip i.cur::after{content:"";position:absolute;inset:0;width:var(--p,0%);background:var(--accent)}
+  .strip i.cur{background:#3a3340}
+
+  .stage{
+    position:relative;border:1px solid var(--line);border-radius:var(--r);
+    background:var(--surface);padding:16px 14px 14px;text-align:center;overflow:hidden;
+    transition:background .35s;
+  }
+  .stage::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(600px 240px at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 70%);}
+  .stage > *{position:relative}
+  .statechip{
+    display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:1.2px;
+    color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius:999px;padding:4px 12px;
+  }
+  .statechip b{font-weight:700}
+  .round{font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:.5px}
+  .round b{color:var(--text)}
+  .exname{font-size:30px;font-weight:900;letter-spacing:-.5px;margin:4px 0 0;text-wrap:balance}
+  .exsub{font-size:12.5px;color:var(--muted);margin-top:3px;min-height:18px}
+  .time{
+    font-size:92px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-4px;
+    line-height:1.02;margin:6px 0 2px;color:var(--text);
+  }
+  .time.warn{color:var(--work)}
+  .bar{height:8px;border-radius:5px;background:#2a242e;overflow:hidden;margin:4px 2px 12px}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:5px}
+  .nextup{
+    display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;color:var(--muted);
+    min-height:24px;
+  }
+  .nextup b{color:var(--text);font-weight:700}
+  .cue{
+    margin-top:12px;text-align:left;font-size:13px;color:var(--muted);
+    background:#120f15;border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  }
+  .cue b{color:var(--text)}
+  .cue .alt{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);color:#c9b9c3}
+
+  .controls{display:flex;gap:9px;align-items:center;justify-content:center;margin:14px 0 6px}
+  .btn{font-family:inherit;border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+    border-radius:13px;padding:14px 17px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0a06;min-width:156px;font-size:17px;font-weight:900}
+  .btn.ghost{background:transparent;color:var(--muted)}
+  .rowbtns{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:3px}
+  .rowbtns .btn{padding:8px 13px;font-size:12.5px;font-weight:500;color:var(--muted)}
+  .totals{display:flex;justify-content:center;gap:16px;color:var(--muted);font-size:12px;margin-top:11px;flex-wrap:wrap}
+  .totals b{color:var(--text);font-variant-numeric:tabular-nums}
+
+  h2.sec{font-size:13px;color:var(--muted);font-weight:700;margin:24px 0 9px;letter-spacing:.6px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+
+  .hr{padding:13px 14px;display:flex;flex-direction:column;gap:9px}
+  .hrtop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .hr .big{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-1.5px;color:var(--work)}
+  .hr .big em{font-style:normal;font-size:13px;font-weight:700;color:var(--muted);margin-left:3px}
+  .hrtop .who{font-size:12px;color:var(--muted)}
+  .hrtop .who b{color:var(--text)}
+  .hr .lbl{font-size:12px;color:var(--muted);line-height:1.75;border-top:1px dashed var(--line);padding-top:9px}
+  .hr .lbl b{color:var(--text)}
+
+  .rounds{padding:4px 0}
+  .rrow{padding:11px 14px;border-top:1px solid var(--line)}
+  .rrow:first-child{border-top:none}
+  .rtitle{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.5px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface-2);
+    border-radius:10px;padding:6px 9px;font-size:12.5px;color:var(--muted);cursor:pointer;font-family:inherit}
+  .chip .box{width:15px;height:15px;border-radius:5px;border:1.5px solid #534757;display:inline-flex;
+    align-items:center;justify-content:center;font-size:10px;color:#1a0a06;flex:0 0 auto}
+  .chip.done{color:var(--text);border-color:var(--work)}
+  .chip.done .box{background:var(--work);border-color:var(--work)}
+  .chip.cur{outline:2px solid var(--rest);outline-offset:1px;color:var(--text)}
+  .chip .go{color:var(--rest);font-size:11px}
+
+  details.settings{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+  details.settings summary{padding:13px 14px;cursor:pointer;font-weight:700;font-size:13.5px;list-style:none}
+  details.settings summary::-webkit-details-marker{display:none}
+  details.settings summary::after{content:" ▾";color:var(--muted)}
+  details.settings[open] summary::after{content:" ▴"}
+  .sbody{padding:0 14px 15px;border-top:1px solid var(--line)}
+  .settitle{font-weight:700;font-size:13px;margin-top:13px;color:var(--text)}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .field:last-child{border-bottom:none}
+  .field label{font-size:13px}
+  .field .hint{display:block;font-size:11px;color:var(--muted);margin-top:1px}
+  input[type=number]{width:76px;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:8px 10px;font-size:15px;font-family:inherit;text-align:center}
+  input[type=checkbox]{width:20px;height:20px;accent-color:var(--work)}
+  .presets{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+  .preset{flex:1 1 110px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);
+    border-radius:11px;padding:9px 8px;font-size:12.5px;cursor:pointer;font-family:inherit;text-align:center}
+  .preset b{display:block;color:var(--text);font-size:14px;font-weight:800;margin-bottom:1px}
+  .preset.on{border-color:var(--work);color:var(--text);background:color-mix(in srgb, var(--work) 14%, var(--surface-2))}
+  .note{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:10px}
+  .warnbox{margin-top:16px;border:1px solid #4a2f2a;background:#1d1216;border-radius:var(--r);
+    padding:12px 14px;font-size:12px;color:#d9bcb6;line-height:1.7}
+  .warnbox b{color:#ffb9a6}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#2b2430;color:var(--text);
+    border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;
+    transition:opacity .25s;pointer-events:none;z-index:9}
+  .toast.show{opacity:1}
+  @media (max-width:400px){ .time{font-size:76px} .exname{font-size:26px} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="title">十分鐘 HIIT 計時器
+      <small id="subtitle">五個動作 · 低衝擊護膝版 · 最後 5 秒與換動作有聲音提醒</small>
+    </div>
+    <button class="iconbtn" id="btn-sound" title="音效開關">🔊</button>
+  </header>
+
+  <div class="strip" id="strip"></div>
+
+  <section class="stage" id="stage">
+    <span class="statechip" id="chip">準備開始</span>
+    <div class="round" id="round">主訓練 10:00　·　2 輪 × 5 動作</div>
+    <div class="exname" id="exname">十分鐘 HIIT</div>
+    <div class="exsub" id="exsub">按「開始」啟動</div>
+
+    <div class="time" id="time">00:00</div>
+    <div class="bar"><i id="bar"></i></div>
+
+    <div class="nextup" id="nextup"></div>
+
+    <div class="cue" id="cue"></div>
+
+    <div class="controls">
+      <button class="btn ghost" id="btn-prev" title="上一段">⏮</button>
+      <button class="btn primary" id="btn-play">開始</button>
+      <button class="btn ghost" id="btn-next" title="下一段">⏭</button>
+    </div>
+    <div class="rowbtns">
+      <button class="btn" id="btn-impact">切換標準版</button>
+      <button class="btn" id="btn-restart-seg">重來這一段</button>
+      <button class="btn" id="btn-reset">重設全部</button>
+    </div>
+
+    <div class="totals">
+      <span>已完成 <b id="elapsedTotal">00:00</b></span>
+      <span>剩餘 <b id="remainTotal">00:00</b></span>
+      <span>總長 <b id="totalest">--</b></span>
+    </div>
+  </section>
+
+  <h2 class="sec">強度參考（依年齡計算）</h2>
+  <div class="card hr">
+    <div class="hrtop">
+      <div class="big"><span id="hrLo">119</span>–<span id="hrHi">145</span><em>bpm</em></div>
+      <div class="who"><b id="hrAge">50</b> 歲 · 高強度段落的目標心率（最大心率 <b id="hrMax">170</b> 的 70–85%）</div>
+    </div>
+    <div class="lbl">
+      沒有心率錶就用<b>說話測試</b>：動作中只講得出 3–5 個字＝強度剛好；還能講整句＝可以再快；完全說不出話＝太猛，降速。
+      休息段落要降到 <b id="hrRec">102</b> bpm 以下再進下一段。
+    </div>
+  </div>
+
+  <h2 class="sec">課表進度</h2>
+  <div class="card rounds" id="rounds"></div>
+
+  <details class="settings">
+    <summary>設定（強度、輪數、熱身、聲音）</summary>
+    <div class="sbody">
+      <div class="settitle">強度（動 / 休，兩輪剛好 10 分鐘）</div>
+      <div class="presets" id="presets">
+        <button class="preset" data-w="30" data-r="30"><b>30 / 30</b>入門・回復中</button>
+        <button class="preset" data-w="40" data-r="20"><b>40 / 20</b>標準・45–54 歲</button>
+        <button class="preset" data-w="45" data-r="15"><b>45 / 15</b>進階・體能好</button>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>動作秒數<span class="hint">每個動作做多久</span></label>
+        <input type="number" id="s-work" min="10" max="120" step="5">
+      </div>
+      <div class="field">
+        <label>休息秒數<span class="hint">動作之間</span></label>
+        <input type="number" id="s-rest" min="5" max="120" step="5">
+      </div>
+      <div class="field">
+        <label>輪數<span class="hint">五個動作做幾輪（2 輪＝10 分鐘）</span></label>
+        <input type="number" id="s-rounds" min="1" max="6" step="1">
+      </div>
+
+      <div class="settitle">熱身與緩和</div>
+      <div class="field">
+        <label>熱身<span class="hint">踏步、肩頸、髖關節各 20 秒</span></label>
+        <input type="number" id="s-warmup" min="0" max="300" step="15">
+      </div>
+      <div class="field">
+        <label>緩和伸展<span class="hint">慢走、大腿前側、腿後各 20 秒</span></label>
+        <input type="number" id="s-cooldown" min="0" max="300" step="15">
+      </div>
+
+      <div class="settitle">動作版本</div>
+      <div class="field">
+        <label>低衝擊護膝模式<span class="hint">腳不離地：側點步開合、原地踏步、椅子蹲</span></label>
+        <input type="checkbox" id="s-lowimpact">
+      </div>
+
+      <div class="settitle">聲音</div>
+      <div class="field">
+        <label>嗶聲提醒<span class="hint">最後 5 秒每秒一嗶，換段落長嗶</span></label>
+        <input type="checkbox" id="s-sound">
+      </div>
+      <div class="field">
+        <label>語音播報<span class="hint">動作名稱、第幾輪、下一個動作</span></label>
+        <input type="checkbox" id="s-voice">
+      </div>
+      <div class="field">
+        <label>過半提示音<span class="hint">動作做到一半時一聲短音</span></label>
+        <input type="checkbox" id="s-half">
+      </div>
+      <div class="field">
+        <label>震動提醒<span class="hint">手機支援時，換段落震動</span></label>
+        <input type="checkbox" id="s-vibrate">
+      </div>
+      <div class="field">
+        <label>訓練時螢幕不熄滅<span class="hint">支援的瀏覽器才有效</span></label>
+        <input type="checkbox" id="s-wakelock">
+      </div>
+      <div class="field">
+        <label>測試聲音<span class="hint">第一次先按一下解鎖手機音訊</span></label>
+        <button class="iconbtn" id="btn-test">播放測試</button>
+      </div>
+
+      <div class="settitle">個人</div>
+      <div class="field">
+        <label>年齡<span class="hint">用來計算目標心率區間</span></label>
+        <input type="number" id="s-age" min="12" max="95" step="1">
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <label>回復預設值<span class="hint">回到 40/20、2 輪、低衝擊</span></label>
+        <button class="iconbtn" id="btn-defaults">還原預設</button>
+      </div>
+    </div>
+  </details>
+
+  <div class="warnbox">
+    <b>給 45–54 歲的三個提醒：</b>
+    ① 熱身不要跳過——四十歲後肌腱彈性下降，冷身直接衝刺最容易拉傷。
+    ② 落地永遠是<b>前腳掌先著地、膝蓋微彎</b>緩衝；膝蓋出現尖銳痛（不是痠）就立刻切到低衝擊模式。
+    ③ 深蹲與彎腰提膝時腰椎保持中立，不要為了做快而圓背。
+    每週 2–3 次、中間至少隔一天；胸悶、頭暈、關節刺痛請立刻停止。
+  </div>
+
+  <p class="note" style="text-align:center">空白鍵＝開始／暫停　←　→＝上一段／下一段</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ----------------------------------------------------------- 五個動作 */
+
+var EX = [
+  {
+    key:"jj", name:"開合跳", en:"Jumping Jacks", focus:"全身・心肺",
+    cue:"雙腳與肩同寬，起跳同時雙腳外開、雙手過頭；落地用前腳掌先著地、膝蓋微彎緩衝，不要整個腳掌砸地。",
+    easyName:"側點步開合", easyEn:"Step Jack",
+    easyCue:"雙腳不離地：一腳向側邊跨出點地、雙手同步由身側舉過頭，收回換邊。節奏一樣快，膝蓋零落地衝擊。"
+  },
+  {
+    key:"cc", name:"胯下擊掌", en:"Under-Leg Claps", focus:"核心・協調",
+    cue:"左右交替把膝蓋抬到腰部高度，雙手在抬起那隻大腿下方擊掌；上身挺直、核心收緊，不要彎腰去就手。",
+    easyName:"抬腿胯下擊掌（不跳）", easyEn:"Marching Under-Leg Claps",
+    easyCue:"改成原地踏步的節奏，支撐腳始終踩地不跳躍，抬腿到舒適高度即可，重點放在穩住核心不晃。"
+  },
+  {
+    key:"bk", name:"彎腰提膝", en:"Standing Cross Crunch", focus:"腹斜肌・腰線",
+    cue:"右手肘向下、左膝向上，在身體中線相碰後回正換邊。用腹部「捲」起來帶動，不是靠腰往下折；吐氣時收緊。",
+    easyName:"扶椅彎腰提膝", easyEn:"Supported Cross Crunch",
+    easyCue:"單手扶椅背或牆面維持平衡，另一手肘去碰對側膝蓋。平衡不花力氣，就能把力氣集中在腹部收縮上。"
+  },
+  {
+    key:"hk", name:"高抬腿", en:"High Knees", focus:"心肺・下肢",
+    cue:"原地快跑，膝蓋抬到髖部高度，前腳掌輕落地、步頻快；上身挺直不後仰，手臂自然擺動。",
+    easyName:"原地快速踏步", easyEn:"Fast March",
+    easyCue:"腳不離地的快走版：膝蓋一樣抬高，但始終有一腳踩穩地面。想加強度就加快擺臂，不要改成跳。"
+  },
+  {
+    key:"sq", name:"深蹲", en:"Squats", focus:"臀腿・肌力",
+    cue:"雙腳與肩同寬、腳尖微外八。髖部先向後坐，膝蓋方向跟著腳尖不要內夾；蹲到大腿接近平行，起身時夾臀。",
+    easyName:"椅子蹲", easyEn:"Box Squat",
+    easyCue:"後方放一張椅子，髖部向後坐到輕觸椅面就起身。深度固定、膝蓋不過度前推，對膝關節最友善。"
+  }
+];
+
+var WARM_PHASES = [
+  {sec:20, label:"原地踏步，手臂自然擺動"},
+  {sec:20, label:"肩膀與手臂前後繞環"},
+  {sec:20, label:"髖關節繞環、前後擺腿"}
+];
+var COOL_PHASES = [
+  {sec:20, label:"原地慢走，鼻吸口吐把心率降下來"},
+  {sec:20, label:"站姿大腿前側伸展（左右各 10 秒）"},
+  {sec:20, label:"體前彎，放鬆腿後與下背"}
+];
+
+var DEF = {
+  work:40, rest:20, rounds:2, warmup:60, cooldown:60,
+  lowImpact:true, age:50,
+  sound:true, voice:true, half:true, vibrate:true, wakelock:true
+};
+var SKEY = "hiit-timer.settings.v1";
+var PKEY = "hiit-timer.progress.v1";
+
+function defaults(){ var s={}; for(var k in DEF) s[k]=DEF[k]; return s; }
+function loadSettings(){
+  var s = defaults();
+  try{
+    var raw = localStorage.getItem(SKEY);
+    if(raw){ var p = JSON.parse(raw);
+      for(var k in DEF) if(p[k] !== undefined && typeof p[k] === typeof DEF[k]) s[k] = p[k];
+    }
+  }catch(e){}
+  return s;
+}
+function saveSettings(){ try{ localStorage.setItem(SKEY, JSON.stringify(settings)); }catch(e){} }
+var settings = loadSettings();
+
+function todayKey(){ var d=new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+function loadProgress(){
+  try{ var raw=localStorage.getItem(PKEY); if(raw){ var p=JSON.parse(raw);
+    if(p && p.date===todayKey() && p.done) return p.done; } }catch(e){}
+  return {};
+}
+function saveProgress(){ try{ localStorage.setItem(PKEY, JSON.stringify({date:todayKey(), done:done})); }catch(e){} }
+var done = loadProgress();     // { "0:2": true }  → 第 0 輪第 2 個動作
+
+/* 依模式取得動作顯示名稱 */
+function nameOf(ex){ return settings.lowImpact ? ex.easyName : ex.name; }
+function enOf(ex){ return settings.lowImpact ? ex.easyEn : ex.en; }
+function cueOf(ex){ return settings.lowImpact ? ex.easyCue : ex.cue; }
+function altOf(ex){
+  return settings.lowImpact
+    ? "標準版是「" + ex.name + "」：" + ex.cue
+    : "膝蓋不適時改做「" + ex.easyName + "」：" + ex.easyCue;
+}
+
+/* ------------------------------------------------------------ 時間軸 */
+
+var timeline = [];
+
+function buildTimeline(){
+  var segs = [];
+  if(settings.warmup > 0) segs.push({type:"warmup", dur:settings.warmup, phases:WARM_PHASES});
+  for(var r=0; r<settings.rounds; r++){
+    for(var i=0; i<EX.length; i++){
+      segs.push({type:"work", ex:i, round:r, dur:settings.work});
+      var last = (r === settings.rounds-1 && i === EX.length-1);
+      if(settings.rest > 0){
+        var nx = last ? null : (i === EX.length-1 ? {ex:0, round:r+1} : {ex:i+1, round:r});
+        segs.push({type:"rest", dur:settings.rest, next:nx, round:r});
+      }
+    }
+  }
+  if(settings.cooldown > 0) segs.push({type:"cooldown", dur:settings.cooldown, phases:COOL_PHASES});
+  segs.push({type:"done", dur:0});
+  var acc = 0;
+  segs.forEach(function(s){ s.startAt = acc; acc += s.dur; });
+  return segs;
+}
+function totalDuration(){ var t=0; timeline.forEach(function(s){ t+=s.dur; }); return t; }
+function mainDuration(){ return settings.rounds * EX.length * (settings.work + settings.rest); }
+
+/* -------------------------------------------------------------- 音效 */
+
+var actx=null, scheduled=[], timers=[];
+
+function ensureAudio(){
+  if(!actx){
+    var C = window.AudioContext || window.webkitAudioContext;
+    if(!C) return null;
+    try{ actx = new C(); }catch(e){ return null; }
+  }
+  if(actx.state === "suspended") actx.resume().catch(function(){});
+  return actx;
+}
+function beepAt(when, freq, dur, vol, type){
+  var ctx = ensureAudio(); if(!ctx || !settings.sound) return;
+  var t = Math.max(when, ctx.currentTime + 0.005);
+  var osc = ctx.createOscillator(), g = ctx.createGain();
+  osc.type = type || "sine";
+  osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t); osc.stop(t + dur + 0.05);
+  scheduled.push(osc);
+}
+function clearScheduled(){
+  scheduled.forEach(function(o){ try{ o.stop(actx ? actx.currentTime : 0); }catch(e){} });
+  scheduled = [];
+  timers.forEach(function(t){ clearTimeout(t); }); timers = [];
+}
+
+/** 整段聲音一次排程到音訊時鐘上：手機節流也不會走音 */
+function scheduleSegmentAudio(){
+  clearScheduled();
+  var seg = timeline[idx];
+  if(!seg || seg.type === "done") return;
+  var remain = remaining(); if(remain <= 0) return;
+  var ctx = ensureAudio();
+
+  if(ctx && settings.sound){
+    var now = ctx.currentTime, end = now + remain;
+    // 動作做到一半的提示音
+    if(seg.type === "work" && settings.half){
+      var mid = end - seg.dur/2;
+      if(mid > now + 0.1) beepAt(mid, 500, 0.09, 0.16);
+    }
+    // 最後 5 秒倒數
+    for(var k=5; k>=1; k--){
+      var t = end - k;
+      if(t > now + 0.05) beepAt(t, 880, 0.11, 0.30);
+    }
+    // 換段落：兩短一長
+    var nextIsWork = timeline[idx+1] && timeline[idx+1].type === "work";
+    var f = nextIsWork ? 1320 : 740;
+    beepAt(end, f, 0.15, 0.42, "triangle");
+    beepAt(end + 0.19, f, 0.15, 0.42, "triangle");
+    beepAt(end + 0.40, nextIsWork ? 1760 : 988, 0.55, 0.45, "triangle");
+  }
+  if(settings.vibrate && navigator.vibrate){
+    timers.push(setTimeout(function(){ try{ navigator.vibrate([120,60,160]); }catch(e){} }, remain*1000));
+  }
+}
+
+function speak(text){
+  if(!settings.voice || !("speechSynthesis" in window)) return;
+  try{
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-TW"; u.rate = 1.08;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function stopSpeech(){ if("speechSynthesis" in window){ try{ window.speechSynthesis.cancel(); }catch(e){} } }
+
+/* ------------------------------------------------------------ 計時核心 */
+
+var idx=0, running=false, segElapsed=0, anchor=0, ticker=null, finished=false;
+
+function rawRemaining(){
+  var seg = timeline[idx]; if(!seg) return 0;
+  return seg.dur - (segElapsed + (running ? (Date.now()-anchor)/1000 : 0));
+}
+function remaining(){ return Math.max(0, rawRemaining()); }
+function segElapsedNow(){
+  var seg = timeline[idx]; if(!seg) return 0;
+  return Math.min(seg.dur, segElapsed + (running ? (Date.now()-anchor)/1000 : 0));
+}
+
+function start(){
+  if(finished){ resetAll(); }
+  ensureAudio();
+  if(settings.voice && "speechSynthesis" in window){
+    try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); }catch(e){}
+  }
+  running = true; anchor = Date.now();
+  announce(); scheduleSegmentAudio(); requestWakeLock();
+  if(!ticker) ticker = setInterval(tick, 100);
+  render();
+}
+function pause(){
+  if(!running) return;
+  segElapsed = segElapsedNow(); running = false;
+  clearScheduled(); stopSpeech(); releaseWakeLock(); render();
+}
+function toggle(){ running ? pause() : start(); }
+
+function goTo(i){
+  idx = Math.max(0, Math.min(timeline.length-1, i));
+  segElapsed = 0; anchor = Date.now();
+  finished = (timeline[idx].type === "done");
+  clearScheduled(); stopSpeech();
+  if(running && !finished){ announce(); scheduleSegmentAudio(); }
+  else if(finished){ running = false; releaseWakeLock(); }
+  render();
+}
+function skipNext(){
+  if(idx >= timeline.length-1) return;
+  goTo(idx+1);
+  if(timeline[idx].type === "done") finish();
+}
+function prevSeg(){
+  if(segElapsedNow() > 3 && timeline[idx].type !== "done"){ goTo(idx); return; }
+  goTo(idx-1);
+}
+function finish(){
+  finished = true; running = false;
+  clearScheduled(); releaseWakeLock();
+  var ctx = ensureAudio();
+  if(ctx && settings.sound){
+    var n = ctx.currentTime + 0.05;
+    beepAt(n, 660, 0.18, 0.4, "triangle");
+    beepAt(n+0.22, 988, 0.18, 0.4, "triangle");
+    beepAt(n+0.44, 1320, 0.85, 0.45, "triangle");
+  }
+  speak("訓練完成，十分鐘做完了，記得走動一下再坐下");
+  if(settings.vibrate && navigator.vibrate){ try{ navigator.vibrate([200,100,200,100,320]); }catch(e){} }
+  render();
+}
+
+/** 時間一律用 Date.now() 換算；分頁被凍結後回來會把漏掉的段落一次補完 */
+function tick(){
+  if(!running || finished) return;
+  var carry = -rawRemaining();
+  if(carry < 0){ render(); return; }
+  var guard = 0;
+  while(guard++ < 2000){
+    var seg = timeline[idx];
+    if(seg && seg.type === "work"){ done[seg.round + ":" + seg.ex] = true; saveProgress(); }
+    if(idx >= timeline.length-1) break;
+    idx++; clearScheduled();
+    var next = timeline[idx];
+    if(next.type === "done"){ finish(); return; }
+    if(carry < next.dur){
+      segElapsed = carry; anchor = Date.now();
+      announce(); scheduleSegmentAudio();
+      break;
+    }
+    carry -= next.dur;
+  }
+  render();
+}
+
+function resetAll(){
+  running=false; finished=false; idx=0; segElapsed=0;
+  clearScheduled(); stopSpeech(); releaseWakeLock(); render();
+}
+
+function announce(){
+  var seg = timeline[idx];
+  if(!seg || !settings.voice) return;
+  if(seg.type === "warmup"){
+    speak("熱身 " + Math.round(seg.dur) + " 秒，從原地踏步開始");
+  }else if(seg.type === "work"){
+    var ex = EX[seg.ex];
+    var pre = (seg.ex === 0 && settings.rounds > 1) ? ("第 " + (seg.round+1) + " 輪，") : "";
+    speak(pre + nameOf(ex) + "，開始");
+  }else if(seg.type === "rest"){
+    if(seg.next) speak("休息，下一個 " + nameOf(EX[seg.next.ex]));
+    else speak("休息，準備緩和");
+  }else if(seg.type === "cooldown"){
+    speak("緩和伸展，慢慢把呼吸調回來");
+  }
+}
+
+/* ------------------------------------------------------- 螢幕不熄滅 */
+
+var wakeLock = null;
+function requestWakeLock(){
+  if(!settings.wakelock || !("wakeLock" in navigator)) return;
+  navigator.wakeLock.request("screen").then(function(l){
+    wakeLock = l; l.addEventListener("release", function(){ wakeLock = null; });
+  }).catch(function(){});
+}
+function releaseWakeLock(){ if(wakeLock){ try{ wakeLock.release(); }catch(e){} wakeLock = null; } }
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible" && running){ requestWakeLock(); render(); }
+});
+
+/* -------------------------------------------------------------- 畫面 */
+
+var $ = function(id){ return document.getElementById(id); };
+
+function fmt(s){
+  s = Math.max(0, Math.ceil(s - 0.001));
+  var m = Math.floor(s/60), ss = s%60;
+  return (m<10?"0":"")+m+":"+(ss<10?"0":"")+ss;
+}
+function phaseLabel(seg, elapsed){
+  var list = seg.phases, base = 0;
+  list.forEach(function(p){ base += p.sec; });
+  var scale = base > 0 ? seg.dur/base : 1, acc = 0;
+  for(var i=0;i<list.length;i++){
+    acc += list[i].sec * scale;
+    if(elapsed < acc) return list[i].label;
+  }
+  return list[list.length-1].label;
+}
+
+function render(){
+  var seg = timeline[idx], rem = remaining(), root = document.documentElement;
+  var total = totalDuration();
+
+  if(finished || !seg || seg.type === "done"){
+    root.style.setProperty("--accent", "var(--cool)");
+    $("chip").textContent = "完成";
+    $("round").textContent = settings.rounds + " 輪 × " + EX.length + " 動作　全部結束";
+    $("exname").textContent = "做完了 🎉";
+    $("exsub").textContent = "別馬上坐下，先走動 1–2 分鐘";
+    $("time").textContent = "00:00";
+    $("time").classList.remove("warn");
+    $("bar").style.width = "100%";
+    $("nextup").textContent = "";
+    $("cue").innerHTML = "<b>收操：</b>補 300–500ml 水，30 分鐘內吃到蛋白質。明天若大腿前側或小腿痠是正常的；膝蓋或下背痛就不正常，下次直接用低衝擊模式。";
+    $("btn-play").textContent = "再做一次";
+  }else if(seg.type === "work"){
+    var ex = EX[seg.ex];
+    root.style.setProperty("--accent", "var(--work)");
+    $("chip").textContent = "動作中";
+    $("round").innerHTML = "第 <b>" + (seg.round+1) + "</b> / " + settings.rounds + " 輪　·　動作 <b>" +
+      (seg.ex+1) + "</b> / " + EX.length + "　·　" + ex.focus;
+    $("exname").textContent = nameOf(ex);
+    $("exsub").textContent = enOf(ex) + (settings.lowImpact ? "　·　低衝擊版" : "");
+    var nxt = nextWorkOf(idx);
+    $("nextup").innerHTML = nxt ? ("下一個　<b>" + escapeHtml(nameOf(EX[nxt.ex])) + "</b>") : "最後一個動作，撐住";
+    $("cue").innerHTML = "<b>要領：</b>" + escapeHtml(cueOf(ex)) +
+      '<span class="alt">' + escapeHtml(altOf(ex)) + "</span>";
+    setTime(rem, seg.dur);
+    $("btn-play").textContent = running ? "暫停" : "繼續";
+  }else if(seg.type === "rest"){
+    root.style.setProperty("--accent", "var(--rest)");
+    $("chip").textContent = "休息";
+    $("round").innerHTML = "第 <b>" + (seg.round+1) + "</b> / " + settings.rounds + " 輪　·　調整呼吸";
+    if(seg.next){
+      var nex = EX[seg.next.ex];
+      $("exname").textContent = nameOf(nex);
+      $("exsub").textContent = "下一個動作　" + enOf(nex);
+      $("nextup").innerHTML = (seg.next.ex === 0 && seg.next.round !== seg.round)
+        ? ("即將進入　<b>第 " + (seg.next.round+1) + " 輪</b>") : "鼻子吸、嘴巴吐，準備好姿勢";
+      $("cue").innerHTML = "<b>先看一下：</b>" + escapeHtml(cueOf(nex)) +
+        '<span class="alt">' + escapeHtml(altOf(nex)) + "</span>";
+    }else{
+      $("exname").textContent = "最後一段";
+      $("exsub").textContent = "主訓練結束";
+      $("nextup").textContent = "接著是緩和伸展";
+      $("cue").innerHTML = "<b>主訓練完成。</b>先別停下來不動，原地慢走、把呼吸拉長，接下來進緩和伸展。";
+    }
+    setTime(rem, seg.dur);
+    $("btn-play").textContent = running ? "暫停" : "繼續";
+  }else{ // warmup / cooldown
+    var isWarm = seg.type === "warmup";
+    root.style.setProperty("--accent", isWarm ? "var(--warm)" : "var(--cool)");
+    $("chip").textContent = isWarm ? "熱身" : "緩和";
+    $("round").textContent = isWarm
+      ? ("主訓練 " + fmt(mainDuration()) + "　·　" + settings.rounds + " 輪 × " + EX.length + " 動作")
+      : "做得好，慢慢收";
+    $("exname").textContent = isWarm ? "熱身" : "緩和伸展";
+    $("exsub").textContent = phaseLabel(seg, segElapsedNow());
+    $("nextup").innerHTML = isWarm ? ("第一個動作　<b>" + escapeHtml(nameOf(EX[0])) + "</b>") : "";
+    $("cue").innerHTML = isWarm
+      ? "<b>為什麼不能跳過：</b>四十歲後肌腱彈性下降，沒熱身直接衝刺最容易拉傷。先把心跳帶起來、關節轉開，正式段落才推得動。"
+      : "<b>緩和：</b>每個伸展停留時呼吸不要憋，拉到有緊繃感但不痛的位置就好。";
+    setTime(rem, seg.dur);
+    $("btn-play").textContent = running ? "暫停" : (idx===0 && segElapsed===0 ? "開始" : "繼續");
+  }
+
+  var el = (seg ? seg.startAt : 0) + (seg && seg.type !== "done" ? segElapsedNow() : 0);
+  $("elapsedTotal").textContent = fmt(el);
+  $("remainTotal").textContent = fmt(total - el);
+  $("totalest").textContent = fmt(total);
+  $("btn-sound").textContent = settings.sound ? "🔊" : "🔇";
+  $("btn-impact").textContent = settings.lowImpact ? "切換標準版" : "切換低衝擊版";
+  $("subtitle").textContent = "五個動作 · " + (settings.lowImpact ? "低衝擊護膝版" : "標準版") +
+    " · 最後 5 秒與換動作有聲音提醒";
+
+  renderStrip();
+  renderRounds();
+  renderHR();
+}
+
+function nextWorkOf(i){
+  for(var j=i+1; j<timeline.length; j++) if(timeline[j].type === "work") return timeline[j];
+  return null;
+}
+function setTime(rem, dur){
+  $("time").textContent = fmt(rem);
+  $("time").classList.toggle("warn", rem <= 5.001 && rem > 0);
+  $("bar").style.width = (dur > 0 ? ((dur-rem)/dur*100) : 0).toFixed(1) + "%";
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+
+/* 上方：整個課表的區塊進度條（結構只建一次，之後只更新狀態） */
+function renderStrip(){
+  var st = $("strip");
+  var blocks = [];
+  for(var i=0;i<timeline.length;i++) if(timeline[i].type !== "done") blocks.push(i);
+  if(st.dataset.n !== String(blocks.length)){
+    var html = "";
+    blocks.forEach(function(i){
+      var s = timeline[i];
+      var flex = s.type === "rest" ? Math.max(0.35, s.dur/Math.max(1, settings.work)) : 1;
+      html += '<i style="flex:' + flex.toFixed(2) + '"></i>';
+    });
+    st.innerHTML = html;
+    st.dataset.n = String(blocks.length);
+  }
+  var nodes = st.children;
+  for(var j=0;j<blocks.length;j++){
+    var el = nodes[j], at = blocks[j];
+    var cls = at < idx ? "done" : (at === idx ? "cur" : "");
+    if(el.className !== cls) el.className = cls;
+    if(at === idx){
+      var s2 = timeline[at];
+      el.style.setProperty("--p", (s2.dur > 0 ? (segElapsedNow()/s2.dur*100) : 0).toFixed(1) + "%");
+    }
+  }
+}
+
+function renderRounds(){
+  var seg = timeline[idx];
+  var curR = seg && seg.type === "work" ? seg.round : -1;
+  var curE = seg && seg.type === "work" ? seg.ex : -1;
+  var html = "";
+  for(var r=0; r<settings.rounds; r++){
+    html += '<div class="rrow"><div class="rtitle">第 ' + (r+1) + ' 輪　·　' +
+            settings.work + " 秒動 / " + settings.rest + ' 秒休</div><div class="chips">';
+    for(var i=0;i<EX.length;i++){
+      var k = r+":"+i, d = !!done[k], c = (curR===r && curE===i);
+      html += '<span class="chip' + (d?" done":"") + (c?" cur":"") + '">' +
+              '<span class="box" data-toggle="' + k + '">' + (d?"✓":"") + "</span>" +
+              escapeHtml(nameOf(EX[i])) +
+              '<span class="go" data-jump="' + r + "|" + i + '">▶</span></span>';
+    }
+    html += "</div></div>";
+  }
+  var el = $("rounds");
+  if(el.dataset.sig !== html){ el.innerHTML = html; el.dataset.sig = html; }
+}
+
+function renderHR(){
+  var age = settings.age;
+  var max = 220 - age;
+  var lo = Math.round(max*0.70), hi = Math.round(max*0.85), rec = Math.round(max*0.60);
+  $("hrAge").textContent = age;
+  $("hrLo").textContent = lo; $("hrHi").textContent = hi;
+  $("hrMax").textContent = max;
+  $("hrRec").textContent = rec;
+}
+
+$("rounds").addEventListener("click", function(e){
+  var t = e.target;
+  if(t.dataset && t.dataset.toggle){
+    var k = t.dataset.toggle;
+    if(done[k]) delete done[k]; else done[k] = true;
+    saveProgress(); renderRounds();
+  }else if(t.dataset && t.dataset.jump){
+    var p = t.dataset.jump.split("|"), r = +p[0], i = +p[1];
+    for(var j=0;j<timeline.length;j++){
+      var s = timeline[j];
+      if(s.type === "work" && s.round === r && s.ex === i){
+        goTo(j); toast("跳到 第 " + (r+1) + " 輪　" + nameOf(EX[i])); break;
+      }
+    }
+  }
+});
+
+/* ------------------------------------------------------------ 設定 UI */
+
+function renderSettingsUI(){
+  $("s-work").value = settings.work;
+  $("s-rest").value = settings.rest;
+  $("s-rounds").value = settings.rounds;
+  $("s-warmup").value = settings.warmup;
+  $("s-cooldown").value = settings.cooldown;
+  $("s-age").value = settings.age;
+  $("s-lowimpact").checked = settings.lowImpact;
+  $("s-sound").checked = settings.sound;
+  $("s-voice").checked = settings.voice;
+  $("s-half").checked = settings.half;
+  $("s-vibrate").checked = settings.vibrate;
+  $("s-wakelock").checked = settings.wakelock;
+  Array.prototype.forEach.call(document.querySelectorAll(".preset"), function(b){
+    b.classList.toggle("on", +b.dataset.w === settings.work && +b.dataset.r === settings.rest);
+  });
+}
+
+function rebuild(){
+  var cur = timeline[idx];
+  var r = cur && cur.type === "work" ? cur.round : -1, i = cur && cur.type === "work" ? cur.ex : -1;
+  timeline = buildTimeline();
+  var at = 0;
+  if(r >= 0){
+    for(var j=0;j<timeline.length;j++){
+      var s = timeline[j];
+      if(s.type === "work" && s.round === r && s.ex === i){ at = j; break; }
+    }
+  }
+  idx = Math.min(at || Math.min(idx, timeline.length-1), timeline.length-1);
+  segElapsed = 0; anchor = Date.now();
+  clearScheduled();
+  if(running) scheduleSegmentAudio();
+  render();
+}
+
+function clampNum(input, min, max, fb){
+  var v = parseFloat(input.value);
+  if(!isFinite(v)) v = fb;
+  v = Math.min(max, Math.max(min, Math.round(v)));
+  input.value = v; return v;
+}
+
+document.querySelector(".sbody").addEventListener("change", function(e){
+  var t = e.target, id = t.id, needRebuild = false;
+  if(id === "s-work"){ settings.work = clampNum(t,10,120,DEF.work); needRebuild = true; }
+  else if(id === "s-rest"){ settings.rest = clampNum(t,5,120,DEF.rest); needRebuild = true; }
+  else if(id === "s-rounds"){ settings.rounds = clampNum(t,1,6,DEF.rounds); needRebuild = true; }
+  else if(id === "s-warmup"){ settings.warmup = clampNum(t,0,300,DEF.warmup); needRebuild = true; }
+  else if(id === "s-cooldown"){ settings.cooldown = clampNum(t,0,300,DEF.cooldown); needRebuild = true; }
+  else if(id === "s-age"){ settings.age = clampNum(t,12,95,DEF.age); }
+  else if(id === "s-lowimpact"){ settings.lowImpact = t.checked; }
+  else if(id === "s-sound"){ settings.sound = t.checked; if(!t.checked) clearScheduled(); else if(running) scheduleSegmentAudio(); }
+  else if(id === "s-voice"){ settings.voice = t.checked; if(!t.checked) stopSpeech(); }
+  else if(id === "s-half"){ settings.half = t.checked; if(running) scheduleSegmentAudio(); }
+  else if(id === "s-vibrate"){ settings.vibrate = t.checked; if(running) scheduleSegmentAudio(); }
+  else if(id === "s-wakelock"){ settings.wakelock = t.checked; t.checked ? requestWakeLock() : releaseWakeLock(); }
+  saveSettings();
+  renderSettingsUI();
+  needRebuild ? rebuild() : render();
+});
+
+$("presets").addEventListener("click", function(e){
+  var b = e.target.closest(".preset"); if(!b) return;
+  settings.work = +b.dataset.w; settings.rest = +b.dataset.r;
+  saveSettings(); renderSettingsUI(); rebuild();
+  toast(settings.work + " 秒動 / " + settings.rest + " 秒休　·　主訓練 " + fmt(mainDuration()));
+});
+
+/* -------------------------------------------------------------- 事件 */
+
+$("btn-play").addEventListener("click", function(){
+  if(finished){ resetAll(); rebuild(); start(); return; }
+  toggle();
+});
+$("btn-next").addEventListener("click", skipNext);
+$("btn-prev").addEventListener("click", prevSeg);
+$("btn-restart-seg").addEventListener("click", function(){ goTo(idx); });
+$("btn-reset").addEventListener("click", function(){
+  if(!confirm("重設計時器並清除今天的完成紀錄？")) return;
+  done = {}; saveProgress(); resetAll(); rebuild(); toast("已重設");
+});
+$("btn-impact").addEventListener("click", function(){
+  settings.lowImpact = !settings.lowImpact; saveSettings(); renderSettingsUI(); render();
+  toast(settings.lowImpact ? "已切到低衝擊護膝版" : "已切到標準版");
+});
+$("btn-sound").addEventListener("click", function(){
+  settings.sound = !settings.sound; saveSettings(); renderSettingsUI();
+  if(!settings.sound) clearScheduled(); else if(running) scheduleSegmentAudio();
+  toast(settings.sound ? "音效已開啟" : "音效已靜音"); render();
+});
+$("btn-test").addEventListener("click", function(){
+  var ctx = ensureAudio();
+  if(ctx){
+    var n = ctx.currentTime + 0.05;
+    beepAt(n, 880, 0.11, 0.3); beepAt(n+0.55, 880, 0.11, 0.3);
+    beepAt(n+1.1, 1320, 0.15, 0.42, "triangle");
+    beepAt(n+1.29, 1320, 0.15, 0.42, "triangle");
+    beepAt(n+1.5, 1760, 0.55, 0.45, "triangle");
+  }
+  speak("聲音測試，下一個 深蹲");
+  if(settings.vibrate && navigator.vibrate){ try{ navigator.vibrate(120); }catch(e){} }
+});
+$("btn-defaults").addEventListener("click", function(){
+  settings = defaults(); saveSettings(); renderSettingsUI(); rebuild(); toast("已還原預設");
+});
+document.addEventListener("keydown", function(e){
+  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName||"")) return;
+  if(e.code === "Space"){ e.preventDefault(); $("btn-play").click(); }
+  else if(e.code === "ArrowRight"){ e.preventDefault(); skipNext(); }
+  else if(e.code === "ArrowLeft"){ e.preventDefault(); prevSeg(); }
+});
+
+var toastTimer = null;
+function toast(msg){
+  var el = $("toast"); el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 1700);
+}
+
+/* -------------------------------------------------------------- 啟動 */
+
+renderSettingsUI();
+timeline = buildTimeline();
+ticker = setInterval(tick, 100);
+render();
+
+})();
+</script>
+</body>
+</html>
