@@ -21,6 +21,7 @@
     --rest:#2fd3c4;
     --warm:#ffb020;
     --cool:#9b8bff;
+    --breath:#6fb7ff;
     --accent:var(--work);
     --r:14px;
   }
@@ -73,6 +74,18 @@
     line-height:1.02;margin:6px 0 2px;color:var(--text);
   }
   .time.warn{color:var(--work)}
+  /* 呼吸節拍器：圓球跟著吸／吐脹縮，中間是該階段剩幾秒 */
+  .pacer{display:none;align-items:center;justify-content:center;height:196px;margin:2px 0 4px}
+  .orb{
+    width:188px;height:188px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--breath) 48%, transparent),
+               color-mix(in srgb, var(--breath) 10%, transparent) 72%);
+    border:2px solid color-mix(in srgb, var(--breath) 65%, transparent);
+    will-change:transform;transform:scale(.58);
+  }
+  .orb b{font-size:58px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+  .stage.breathing .pacer{display:flex}
+  .stage.breathing .time{display:none}
   .bar{height:8px;border-radius:5px;background:#2a242e;overflow:hidden;margin:4px 2px 12px}
   .bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:5px}
   .nextup{
@@ -123,6 +136,10 @@
   .chip.done .box{background:var(--work);border-color:var(--work)}
   .chip.cur{outline:2px solid var(--rest);outline-offset:1px;color:var(--text)}
   .chip .go{color:var(--rest);font-size:11px}
+  .chip.breath{border-style:dashed}
+  .chip.breath.done{border-color:var(--breath)}
+  .chip.breath.done .box{background:var(--breath);border-color:var(--breath)}
+  .chip.breath .go{color:var(--breath)}
 
   details.settings{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
   details.settings summary{padding:13px 14px;cursor:pointer;font-weight:700;font-size:13.5px;list-style:none}
@@ -173,6 +190,7 @@
     <div class="exname" id="exname">十分鐘 HIIT</div>
     <div class="exsub" id="exsub">按「開始」啟動</div>
 
+    <div class="pacer" id="pacer"><div class="orb" id="orb"><b id="orbNum">4</b></div></div>
     <div class="time" id="time">00:00</div>
     <div class="bar"><i id="bar"></i></div>
 
@@ -243,6 +261,28 @@
       <div class="field">
         <label>緩和伸展<span class="hint">慢走、大腿前側、腿後各 20 秒</span></label>
         <input type="number" id="s-cooldown" min="0" max="300" step="15">
+      </div>
+
+      <div class="settitle">呼吸瘦腰（最後項目）</div>
+      <div class="field">
+        <label>呼吸段落長度<span class="hint" id="breathHint">會自動補成完整的呼吸循環</span></label>
+        <input type="number" id="s-breath" min="0" max="600" step="15">
+      </div>
+      <div class="field">
+        <label>吸氣秒數<span class="hint">鼻子吸，肋骨向兩側擴張</span></label>
+        <input type="number" id="s-bin" min="1" max="20" step="1">
+      </div>
+      <div class="field">
+        <label>吐氣秒數<span class="hint">嘴巴細吐，吐到底</span></label>
+        <input type="number" id="s-bout" min="1" max="30" step="1">
+      </div>
+      <div class="field">
+        <label>收緊秒數<span class="hint">吐完後肚臍往內收並維持</span></label>
+        <input type="number" id="s-bhold" min="0" max="30" step="1">
+      </div>
+      <div class="field">
+        <label>每輪結束都做<span class="hint">預設只在最後一輪做一次當收尾</span></label>
+        <input type="checkbox" id="s-beachround">
       </div>
 
       <div class="settitle">動作版本</div>
@@ -353,9 +393,21 @@ var COOL_PHASES = [
   {sec:20, label:"體前彎，放鬆腿後與下背"}
 ];
 
+/* 呼吸瘦腰：腹式呼吸 ＋ 吐氣末端真空收腹，練的是腹橫肌（束腹帶那層） */
+var BREATH = {
+  name:"呼吸瘦腰", en:"Breathing Waist Cinch",
+  setup:"站姿或平躺屈膝都可以。單手放肋骨、單手放肚子，肩膀放鬆不要聳。",
+  steps:[
+    {key:"in",   label:"吸氣",   tip:"鼻子吸，肋骨往兩側撐開（手感覺到變寬），肚子自然鼓起" },
+    {key:"out",  label:"吐氣",   tip:"嘴巴細細地吐，像吹蠟燭，把氣吐到底、肋骨往下收" },
+    {key:"hold", label:"收緊",   tip:"氣吐完後肚臍往脊椎方向收進去並維持，別再吸氣、別憋到臉紅" }
+  ]
+};
+
 var DEF = {
   work:40, rest:20, rounds:2, warmup:60, cooldown:60,
   lowImpact:true, age:50,
+  breath:90, bIn:4, bOut:6, bHold:5, breathEachRound:false,
   sound:true, voice:true, half:true, vibrate:true, wakelock:true
 };
 var SKEY = "hiit-timer.settings.v1";
@@ -398,16 +450,32 @@ function altOf(ex){
 
 var timeline = [];
 
+function breathCycle(){ return Math.max(3, settings.bIn + settings.bOut + settings.bHold); }
+function breathCycles(){ return Math.max(1, Math.round(settings.breath / breathCycle())); }
+/** 讓呼吸段落剛好結束在一個完整循環上 */
+function breathDur(){ return settings.breath > 0 ? breathCycles() * breathCycle() : 0; }
+
 function buildTimeline(){
   var segs = [];
   if(settings.warmup > 0) segs.push({type:"warmup", dur:settings.warmup, phases:WARM_PHASES});
   for(var r=0; r<settings.rounds; r++){
     for(var i=0; i<EX.length; i++){
       segs.push({type:"work", ex:i, round:r, dur:settings.work});
-      var last = (r === settings.rounds-1 && i === EX.length-1);
+      var lastEx = (i === EX.length-1);
+      var lastOfAll = (r === settings.rounds-1 && lastEx);
+      var breathHere = breathDur() > 0 && lastEx && (settings.breathEachRound || r === settings.rounds-1);
+      // 休息一律保留，間歇段落才剛好是 10:00；接呼吸時這段休息就當成換姿勢的準備時間
       if(settings.rest > 0){
-        var nx = last ? null : (i === EX.length-1 ? {ex:0, round:r+1} : {ex:i+1, round:r});
-        segs.push({type:"rest", dur:settings.rest, next:nx, round:r});
+        var nx = lastOfAll ? null : (lastEx ? {ex:0, round:r+1} : {ex:i+1, round:r});
+        segs.push({type:"rest", dur:settings.rest, next:breathHere ? null : nx,
+                   nextBreath:breathHere, round:r});
+      }
+      if(breathHere){
+        segs.push({
+          type:"breath", dur:breathDur(), round:r,
+          finale:(r === settings.rounds-1),
+          next:(r === settings.rounds-1) ? null : {ex:0, round:r+1}
+        });
       }
     }
   }
@@ -418,7 +486,35 @@ function buildTimeline(){
   return segs;
 }
 function totalDuration(){ var t=0; timeline.forEach(function(s){ t+=s.dur; }); return t; }
-function mainDuration(){ return settings.rounds * EX.length * (settings.work + settings.rest); }
+function mainDuration(){ // 間歇 ＋ 呼吸段落的總長
+  var t = 0;
+  timeline.forEach(function(s){ if(s.type==="work"||s.type==="rest"||s.type==="breath") t += s.dur; });
+  return t;
+}
+function intervalDuration(){ return settings.rounds * EX.length * (settings.work + settings.rest); }
+
+/** 呼吸段落：目前在第幾個循環、哪一個階段、該階段剩幾秒、階段進度 0–1 */
+function breathAt(elapsed){
+  var cyc = breathCycle(), n = Math.min(breathCycles()-1, Math.floor(elapsed / cyc));
+  var t = elapsed - n*cyc;
+  var steps = [
+    {i:0, dur:settings.bIn},
+    {i:1, dur:settings.bOut},
+    {i:2, dur:settings.bHold}
+  ];
+  var acc = 0;
+  for(var k=0;k<steps.length;k++){
+    if(steps[k].dur <= 0) continue;
+    if(t < acc + steps[k].dur){
+      var into = t - acc;
+      return {cycle:n, step:BREATH.steps[steps[k].i], idx:steps[k].i,
+              left:steps[k].dur - into, prog:into/steps[k].dur, dur:steps[k].dur};
+    }
+    acc += steps[k].dur;
+  }
+  var lastIdx = settings.bHold > 0 ? 2 : (settings.bOut > 0 ? 1 : 0);
+  return {cycle:n, step:BREATH.steps[lastIdx], idx:lastIdx, left:0, prog:1, dur:1};
+}
 
 /* -------------------------------------------------------------- 音效 */
 
@@ -467,10 +563,15 @@ function scheduleSegmentAudio(){
       var mid = end - seg.dur/2;
       if(mid > now + 0.1) beepAt(mid, 500, 0.09, 0.16);
     }
-    // 最後 5 秒倒數
-    for(var k=5; k>=1; k--){
-      var t = end - k;
-      if(t > now + 0.05) beepAt(t, 880, 0.11, 0.30);
+    if(seg.type === "breath"){
+      // 呼吸段落：每個「吸／吐／收」的起點給一個柔和單音，當拍子用
+      scheduleBreathCues(now, seg.dur - remain, remain);
+    }else{
+      // 最後 5 秒倒數（呼吸段落不嗶，以免打斷吐氣節奏）
+      for(var k=5; k>=1; k--){
+        var t = end - k;
+        if(t > now + 0.05) beepAt(t, 880, 0.11, 0.30);
+      }
     }
     // 換段落：兩短一長
     var nextIsWork = timeline[idx+1] && timeline[idx+1].type === "work";
@@ -481,6 +582,30 @@ function scheduleSegmentAudio(){
   }
   if(settings.vibrate && navigator.vibrate){
     timers.push(setTimeout(function(){ try{ navigator.vibrate([120,60,160]); }catch(e){} }, remain*1000));
+  }
+}
+
+/** 呼吸段落：把每個吸／吐／收的起點排成柔和單音＋短語音，當節拍器 */
+function scheduleBreathCues(now, elapsed, remain){
+  var cyc = breathCycle(), cycles = breathCycles();
+  var tones = [{f:523,d:0.20,v:0.22},{f:392,d:0.24,v:0.22},{f:659,d:0.12,v:0.17}];
+  var durs  = [settings.bIn, settings.bOut, settings.bHold];
+  for(var c=0;c<cycles;c++){
+    var off = 0;
+    for(var s=0;s<3;s++){
+      if(durs[s] <= 0) continue;
+      var at = c*cyc + off;
+      off += durs[s];
+      var dt = at - elapsed;
+      if(dt > 0.03 && dt < remain - 0.05){
+        beepAt(now + dt, tones[s].f, tones[s].d, tones[s].v);
+        if(settings.voice){
+          (function(label, delay){
+            timers.push(setTimeout(function(){ speak(label); }, delay*1000));
+          })(BREATH.steps[s].label, dt);
+        }
+      }
+    }
   }
 }
 
@@ -568,6 +693,7 @@ function tick(){
   while(guard++ < 2000){
     var seg = timeline[idx];
     if(seg && seg.type === "work"){ done[seg.round + ":" + seg.ex] = true; saveProgress(); }
+    else if(seg && seg.type === "breath"){ done["b:" + seg.round] = true; saveProgress(); }
     if(idx >= timeline.length-1) break;
     idx++; clearScheduled();
     var next = timeline[idx];
@@ -598,7 +724,10 @@ function announce(){
     speak(pre + nameOf(ex) + "，開始");
   }else if(seg.type === "rest"){
     if(seg.next) speak("休息，下一個 " + nameOf(EX[seg.next.ex]));
+    else if(seg.nextBreath) speak("間歇結束，接下來 呼吸瘦腰，先擺好姿勢");
     else speak("休息，準備緩和");
+  }else if(seg.type === "breath"){
+    speak("呼吸瘦腰，跟著節奏，吸氣");
   }else if(seg.type === "cooldown"){
     speak("緩和伸展，慢慢把呼吸調回來");
   }
@@ -638,9 +767,29 @@ function phaseLabel(seg, elapsed){
   return list[list.length-1].label;
 }
 
+/* 呼吸節拍器：圓球大小＝當下該吸還是該吐，球心數字＝這個階段還剩幾秒 */
+var pacerRAF = null;
+function paintPacer(b){
+  var s;
+  if(b.idx === 0)      s = 0.58 + 0.42 * b.prog;          // 吸氣：脹大
+  else if(b.idx === 1) s = 1.00 - 0.42 * b.prog;          // 吐氣：縮小
+  else                 s = 0.58 - 0.05 * Math.sin(b.prog*Math.PI); // 收緊：再往內收一點
+  $("orb").style.transform = "scale(" + s.toFixed(3) + ")";
+  $("orbNum").textContent = Math.max(1, Math.ceil(b.left - 0.001));
+  // 標題跟著球一起換，免得交界處球已經在吐氣、字還停在吸氣
+  $("exname").textContent = b.step.label;
+}
+function pacerLoop(){
+  var seg = timeline[idx];
+  if(!running || finished || !seg || seg.type !== "breath"){ pacerRAF = null; return; }
+  paintPacer(breathAt(segElapsedNow()));
+  pacerRAF = requestAnimationFrame(pacerLoop);
+}
+
 function render(){
   var seg = timeline[idx], rem = remaining(), root = document.documentElement;
   var total = totalDuration();
+  $("stage").classList.toggle("breathing", !!seg && seg.type === "breath" && !finished);
 
   if(finished || !seg || seg.type === "done"){
     root.style.setProperty("--accent", "var(--cool)");
@@ -662,8 +811,11 @@ function render(){
       (seg.ex+1) + "</b> / " + EX.length + "　·　" + ex.focus;
     $("exname").textContent = nameOf(ex);
     $("exsub").textContent = enOf(ex) + (settings.lowImpact ? "　·　低衝擊版" : "");
-    var nxt = nextWorkOf(idx);
-    $("nextup").innerHTML = nxt ? ("下一個　<b>" + escapeHtml(nameOf(EX[nxt.ex])) + "</b>") : "最後一個動作，撐住";
+    var nxt = nextMainOf(idx);
+    $("nextup").innerHTML = !nxt ? "最後一個動作，撐住"
+      : nxt.type === "work"   ? ("下一個　<b>" + escapeHtml(nameOf(EX[nxt.ex])) + "</b>")
+      : nxt.type === "breath" ? ("接著　<b>" + escapeHtml(BREATH.name) + "</b>")
+      : "接著是緩和伸展";
     $("cue").innerHTML = "<b>要領：</b>" + escapeHtml(cueOf(ex)) +
       '<span class="alt">' + escapeHtml(altOf(ex)) + "</span>";
     setTime(rem, seg.dur);
@@ -680,6 +832,13 @@ function render(){
         ? ("即將進入　<b>第 " + (seg.next.round+1) + " 輪</b>") : "鼻子吸、嘴巴吐，準備好姿勢";
       $("cue").innerHTML = "<b>先看一下：</b>" + escapeHtml(cueOf(nex)) +
         '<span class="alt">' + escapeHtml(altOf(nex)) + "</span>";
+    }else if(seg.nextBreath){
+      $("exname").textContent = BREATH.name;
+      $("exsub").textContent = "下一個　" + BREATH.en;
+      $("nextup").innerHTML = "間歇結束　<b>換成呼吸</b>";
+      $("cue").innerHTML = "<b>先擺好姿勢：</b>" + escapeHtml(BREATH.setup) +
+        '<span class="alt">節奏 ' + settings.bIn + "–" + settings.bOut + "–" + settings.bHold +
+        " 秒（吸－吐－收），共 " + breathCycles() + " 次。喘還沒平復沒關係，前一兩次先把呼吸帶慢。</span>";
     }else{
       $("exname").textContent = "最後一段";
       $("exsub").textContent = "主訓練結束";
@@ -688,12 +847,33 @@ function render(){
     }
     setTime(rem, seg.dur);
     $("btn-play").textContent = running ? "暫停" : "繼續";
+  }else if(seg.type === "breath"){
+    var b = breathAt(segElapsedNow());
+    root.style.setProperty("--accent", "var(--breath)");
+    paintPacer(b);
+    if(running && !pacerRAF) pacerRAF = requestAnimationFrame(pacerLoop);
+    $("chip").textContent = "呼吸瘦腰";
+    $("round").innerHTML = seg.finale
+      ? ("最後項目　·　第 <b>" + (b.cycle+1) + "</b> / " + breathCycles() + " 次呼吸")
+      : ("第 <b>" + (seg.round+1) + "</b> / " + settings.rounds + " 輪收尾　·　第 <b>" +
+         (b.cycle+1) + "</b> / " + breathCycles() + " 次呼吸");
+    $("exname").textContent = b.step.label;
+    $("exsub").textContent = BREATH.name + "　·　整段還剩 " + fmt(rem);
+    $("nextup").innerHTML = seg.next
+      ? ("接著　<b>第 " + (seg.next.round+1) + " 輪</b>")
+      : (timeline[idx+1] && timeline[idx+1].type === "cooldown" ? "接著是緩和伸展" : "這是最後一段");
+    $("cue").innerHTML = "<b>" + escapeHtml(b.step.label) + "：</b>" + escapeHtml(b.step.tip) +
+      '<span class="alt">' + escapeHtml(BREATH.setup) + "　節奏 " +
+      settings.bIn + "–" + settings.bOut + "–" + settings.bHold + " 秒（吸－吐－收）。</span>";
+    setTime(rem, seg.dur);
+    $("btn-play").textContent = running ? "暫停" : "繼續";
   }else{ // warmup / cooldown
     var isWarm = seg.type === "warmup";
     root.style.setProperty("--accent", isWarm ? "var(--warm)" : "var(--cool)");
     $("chip").textContent = isWarm ? "熱身" : "緩和";
     $("round").textContent = isWarm
-      ? ("主訓練 " + fmt(mainDuration()) + "　·　" + settings.rounds + " 輪 × " + EX.length + " 動作")
+      ? ("間歇 " + fmt(intervalDuration()) + "　·　" + settings.rounds + " 輪 × " + EX.length + " 動作" +
+         (breathDur() > 0 ? "　·　呼吸瘦腰 " + fmt(breathDur()) : ""))
       : "做得好，慢慢收";
     $("exname").textContent = isWarm ? "熱身" : "緩和伸展";
     $("exsub").textContent = phaseLabel(seg, segElapsedNow());
@@ -711,16 +891,20 @@ function render(){
   $("totalest").textContent = fmt(total);
   $("btn-sound").textContent = settings.sound ? "🔊" : "🔇";
   $("btn-impact").textContent = settings.lowImpact ? "切換標準版" : "切換低衝擊版";
-  $("subtitle").textContent = "五個動作 · " + (settings.lowImpact ? "低衝擊護膝版" : "標準版") +
-    " · 最後 5 秒與換動作有聲音提醒";
+  $("subtitle").textContent = "五個動作" + (breathDur() > 0 ? "＋呼吸瘦腰" : "") + " · " +
+    (settings.lowImpact ? "低衝擊護膝版" : "標準版") + " · 最後 5 秒與換動作有聲音提醒";
 
   renderStrip();
   renderRounds();
   renderHR();
 }
 
-function nextWorkOf(i){
-  for(var j=i+1; j<timeline.length; j++) if(timeline[j].type === "work") return timeline[j];
+/** 下一個「正式項目」：動作、呼吸段落或緩和，略過休息 */
+function nextMainOf(i){
+  for(var j=i+1; j<timeline.length; j++){
+    var s = timeline[j];
+    if(s.type === "work" || s.type === "breath" || s.type === "cooldown") return s;
+  }
   return null;
 }
 function setTime(rem, dur){
@@ -743,7 +927,9 @@ function renderStrip(){
     var html = "";
     blocks.forEach(function(i){
       var s = timeline[i];
-      var flex = s.type === "rest" ? Math.max(0.35, s.dur/Math.max(1, settings.work)) : 1;
+      var ratio = s.dur / Math.max(1, settings.work);
+      var flex = s.type === "rest" ? Math.max(0.35, ratio)
+               : s.type === "breath" ? Math.min(2.2, Math.max(1, ratio)) : 1;
       html += '<i style="flex:' + flex.toFixed(2) + '"></i>';
     });
     st.innerHTML = html;
@@ -776,6 +962,15 @@ function renderRounds(){
               escapeHtml(nameOf(EX[i])) +
               '<span class="go" data-jump="' + r + "|" + i + '">▶</span></span>';
     }
+    var hasBreath = breathDur() > 0 && (settings.breathEachRound || r === settings.rounds-1);
+    if(hasBreath){
+      var bk = "b:"+r, bd = !!done[bk];
+      var bc = seg && seg.type === "breath" && seg.round === r;
+      html += '<span class="chip breath' + (bd?" done":"") + (bc?" cur":"") + '">' +
+              '<span class="box" data-toggle="' + bk + '">' + (bd?"✓":"") + "</span>" +
+              escapeHtml(BREATH.name) +
+              '<span class="go" data-bjump="' + r + '">▶</span></span>';
+    }
     html += "</div></div>";
   }
   var el = $("rounds");
@@ -806,6 +1001,13 @@ $("rounds").addEventListener("click", function(e){
         goTo(j); toast("跳到 第 " + (r+1) + " 輪　" + nameOf(EX[i])); break;
       }
     }
+  }else if(t.dataset && t.dataset.bjump){
+    var br = +t.dataset.bjump;
+    for(var m=0;m<timeline.length;m++){
+      if(timeline[m].type === "breath" && timeline[m].round === br){
+        goTo(m); toast("跳到 " + BREATH.name); break;
+      }
+    }
   }
 });
 
@@ -818,6 +1020,14 @@ function renderSettingsUI(){
   $("s-warmup").value = settings.warmup;
   $("s-cooldown").value = settings.cooldown;
   $("s-age").value = settings.age;
+  $("s-breath").value = settings.breath;
+  $("s-bin").value = settings.bIn;
+  $("s-bout").value = settings.bOut;
+  $("s-bhold").value = settings.bHold;
+  $("s-beachround").checked = settings.breathEachRound;
+  $("breathHint").textContent = breathDur() > 0
+    ? ("實際 " + breathDur() + " 秒 ＝ " + breathCycles() + " 次 × " + breathCycle() + " 秒循環")
+    : "設 0 就不做呼吸段落";
   $("s-lowimpact").checked = settings.lowImpact;
   $("s-sound").checked = settings.sound;
   $("s-voice").checked = settings.voice;
@@ -862,6 +1072,11 @@ document.querySelector(".sbody").addEventListener("change", function(e){
   else if(id === "s-warmup"){ settings.warmup = clampNum(t,0,300,DEF.warmup); needRebuild = true; }
   else if(id === "s-cooldown"){ settings.cooldown = clampNum(t,0,300,DEF.cooldown); needRebuild = true; }
   else if(id === "s-age"){ settings.age = clampNum(t,12,95,DEF.age); }
+  else if(id === "s-breath"){ settings.breath = clampNum(t,0,600,DEF.breath); needRebuild = true; }
+  else if(id === "s-bin"){ settings.bIn = clampNum(t,1,20,DEF.bIn); needRebuild = true; }
+  else if(id === "s-bout"){ settings.bOut = clampNum(t,1,30,DEF.bOut); needRebuild = true; }
+  else if(id === "s-bhold"){ settings.bHold = clampNum(t,0,30,DEF.bHold); needRebuild = true; }
+  else if(id === "s-beachround"){ settings.breathEachRound = t.checked; needRebuild = true; }
   else if(id === "s-lowimpact"){ settings.lowImpact = t.checked; }
   else if(id === "s-sound"){ settings.sound = t.checked; if(!t.checked) clearScheduled(); else if(running) scheduleSegmentAudio(); }
   else if(id === "s-voice"){ settings.voice = t.checked; if(!t.checked) stopSpeech(); }
@@ -877,7 +1092,7 @@ $("presets").addEventListener("click", function(e){
   var b = e.target.closest(".preset"); if(!b) return;
   settings.work = +b.dataset.w; settings.rest = +b.dataset.r;
   saveSettings(); renderSettingsUI(); rebuild();
-  toast(settings.work + " 秒動 / " + settings.rest + " 秒休　·　主訓練 " + fmt(mainDuration()));
+  toast(settings.work + " 秒動 / " + settings.rest + " 秒休　·　間歇 " + fmt(intervalDuration()));
 });
 
 /* -------------------------------------------------------------- 事件 */
